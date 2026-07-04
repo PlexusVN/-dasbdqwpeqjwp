@@ -25,11 +25,20 @@ app.use(express.json());
 // ---- Supabase client ----
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ FATAL: Missing SUPABASE_URL or SUPABASE_SERVICE_KEY env vars');
+  process.exit(1);
+}
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ---- Admin auth ----
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'admin123';
+
+// ---- Startup info ----
+console.log('Supabase:', supabaseUrl ? '✅ Connected' : '❌ Not set');
+console.log('Admin user:', ADMIN_USER);
+console.log('Auth endpoint:', `/api/verify?key=xxx&hwid=xxx`);
 
 function requireAdmin(req, res, next) {
   const auth = req.headers.authorization;
@@ -44,6 +53,11 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+
+// ---- Health Check (PUBLIC) ----
+app.get('/api/health', (req, res) => {
+  res.json({ success: true, message: 'Server is running', admin: ADMIN_USER || 'admin' });
+});
 
 // ---- Utility ----
 function generateKey(length = 32) {
@@ -337,6 +351,7 @@ tr:hover td{background:#200505}
 <input type="text" id="loginUser" placeholder="Tên đăng nhập">
 <input type="password" id="loginPass" placeholder="Mật khẩu">
 <button class="btn-primary" onclick="login()">ĐĂNG NHẬP</button>
+<button class="btn-primary" onclick="checkHealth()" style="margin-top:10px;background:transparent;border:1px solid #ff202044;font-size:12px">🩺 KIỂM TRA KẾT NỐI</button>
 </div>
 </div>
 <div class="container" id="mainContent" style="display:none">
@@ -377,7 +392,8 @@ tr:hover td{background:#200505}
 <script>
 const BASE=window.location.origin;
 let authToken='',allKeys=[],allLogs=[];
-function login(){const u=document.getElementById('loginUser').value,p=document.getElementById('loginPass').value;if(!u||!p)return showToast('Vui lòng nhập đầy đủ thông tin','error');authToken=btoa(u+':'+p);fetch(BASE+'/api/keys',{headers:{'Authorization':'Basic '+authToken}}).then(r=>{if(r.ok){document.getElementById('loginOverlay').style.display='none';document.getElementById('mainContent').style.display='block';refreshData()}else{showToast('Sai thông tin đăng nhập','error');authToken=''}}).catch(()=>{showToast('Lỗi kết nối server','error');authToken=''})}
+function login(){const u=document.getElementById('loginUser').value,p=document.getElementById('loginPass').value;if(!u||!p)return showToast('Vui lòng nhập đầy đủ thông tin','error');authToken=btoa(u+':'+p);fetch(BASE+'/api/keys',{headers:{'Authorization':'Basic '+authToken}}).then(r=>{if(r.ok){document.getElementById('loginOverlay').style.display='none';document.getElementById('mainContent').style.display='block';refreshData()}else if(r.status===401){showToast('Sai thông tin đăng nhập','error');authToken=''}else{showToast('Lỗi server (HTTP '+r.status+')','error');authToken=''}}).catch(e=>{showToast('Lỗi kết nối: '+e.message,'error');authToken='';console.error('Login error:',e)})}
+function checkHealth(){fetch(BASE+'/api/health').then(r=>r.json()).then(d=>{showToast('✅ Server OK - Admin: '+d.admin,'success')}).catch(e=>{showToast('❌ Server không phản hồi: '+e.message,'error');console.error('Health error:',e)})}
 function showToast(m,t){const e=document.getElementById('toast');e.textContent=m;e.className='toast toast-'+t;e.style.display='block';setTimeout(()=>e.style.display='none',3500)}
 function api(p,o){o=o||{};o.headers=o.headers||{};o.headers['Authorization']='Basic '+authToken;return fetch(BASE+p,o).then(r=>r.json())}
 function refreshData(){Promise.all([api('/api/keys').then(r=>allKeys=r.data||[]),api('/api/logs').then(r=>allLogs=r.data||[]),api('/api/stats').then(r=>{if(r.data)renderStats(r.data)})]).then(()=>{renderTable();renderLogs()}).catch(()=>showToast('Lỗi tải dữ liệu','error'))}
