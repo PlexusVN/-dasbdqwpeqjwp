@@ -55,8 +55,14 @@ function requireAdmin(req, res, next) {
 }
 
 // ---- Health Check (PUBLIC) ----
-app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'Server is running', admin: ADMIN_USER || 'admin' });
+app.get('/api/health', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('keys').select('id', { count: 'exact', head: true });
+    if (error) throw error;
+    res.json({ success: true, message: 'Server is running', admin: ADMIN_USER || 'admin', supabase: 'connected', keys_count: data ? data.length : 0 });
+  } catch (err) {
+    res.json({ success: true, message: 'Server is running', admin: ADMIN_USER || 'admin', supabase: 'error: ' + err.message });
+  }
 });
 
 // ---- Utility ----
@@ -83,7 +89,7 @@ app.get('/api/verify', async (req, res) => {
 
     const { data: keys, error } = await supabase
       .from('keys')
-      .select('key, status, expires_at, hwid')
+      .select('key, status, expires_at, hwid, type')
       .eq('key', key);
 
     if (error) throw error;
@@ -120,6 +126,9 @@ app.get('/api/verify', async (req, res) => {
       await supabase.from('keys').update({ hwid }).eq('key', key);
     }
 
+    // Update last_seen
+    await supabase.from('keys').update({ last_seen: new Date().toISOString() }).eq('key', key);
+
     // Log
     await supabase.from('activity_log').insert({
       action: 'verify',
@@ -132,36 +141,57 @@ app.get('/api/verify', async (req, res) => {
       status: 'valid',
       message: 'Xác thực thành công',
       expires_at: record.expires_at,
+      server_time: new Date().toISOString(),
+      type: record.type || 'basic',
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Lỗi server: ' + err.message });
   }
 });
 
-// ---- Create Key (ADMIN) ----
+// ---- Create Key(s) (ADMIN) ----
 app.post('/api/keys', requireAdmin, async (req, res) => {
   try {
-    const { days = 30, note = '', user = '' } = req.body;
-    const newKey = generateKey(32);
+    const { days = 30, note = '', user = '', prefix: rawPrefix = '', count = 1, suffixLength: rawSuffixLen, type: rawType = 'basic' } = req.body;
+    const keyType = ['basic', 'pro', 'vip'].includes(rawType) ? rawType : 'basic';
+    const num = Math.min(Math.max(parseInt(count) || 1, 1), 500);
     const now = new Date();
-    const expires = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+    const expires = new Date(now.getTime() + parseInt(days) * 24 * 60 * 60 * 1000);
+    const usePrefix = rawPrefix && rawPrefix.trim();
+    const suffixLen = parseInt(rawSuffixLen) || (usePrefix ? 12 : 32);
 
-    await supabase.from('keys').insert({
-      key: newKey,
+    const keys = [];
+    for (let i = 0; i < num; i++) {
+      const randomPart = generateKey(suffixLen);
+      const newKey = usePrefix ? rawPrefix.trim().toUpperCase() + '-' + randomPart : randomPart;
+      keys.push({ key: newKey, days: parseInt(days), expires_at: expires.toISOString(), type: keyType });
+    }
+
+    const inserts = keys.map(k => ({
+      key: k.key,
       status: 'active',
       created_at: now.toISOString(),
-      expires_at: expires.toISOString(),
+      expires_at: k.expires_at,
       hwid: '',
-      user,
-      note,
-    });
+      user: user || '',
+      note: note || '',
+      type: keyType,
+    }));
+    const { error: insertError } = await supabase.from('keys').insert(inserts);
+    if (insertError) throw insertError;
 
     await supabase.from('activity_log').insert({
-      action: 'create', key: newKey,
-      detail: `Tạo key mới, hạn ${days} ngày. Ghi chú: ${note}`,
+      action: 'create',
+      key: num > 1 ? `${num} keys` : keys[0].key,
+      detail: `Tạo ${num} key(s), hạn ${days} ngày. Ghi chú: ${note}`,
     });
 
-    res.json({ success: true, message: 'Tạo key thành công', data: { key: newKey, days, expires_at: expires.toISOString() } });
+    res.json({
+      success: true,
+      message: `Tạo ${num} key thành công`,
+      data: num === 1 ? keys[0] : keys,
+      count: num,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -237,6 +267,22 @@ app.post('/api/keys/:key/unban', requireAdmin, async (req, res) => {
   }
 });
 
+// ---- Reset HWID (ADMIN) ----
+app.post('/api/keys/:key/reset-hwid', requireAdmin, async (req, res) => {
+  try {
+    const { data: keys } = await supabase.from('keys').select('key,hwid').eq('key', req.params.key);
+    if (!keys || keys.length === 0) return res.status(404).json({ success: false, message: 'Key không tồn tại' });
+
+    const oldHwid = keys[0].hwid || 'trống';
+    await supabase.from('keys').update({ hwid: '', last_seen: null }).eq('key', req.params.key);
+    await supabase.from('activity_log').insert({ action: 'reset_hwid', key: req.params.key, detail: `Reset HWID (cũ: ${oldHwid})` });
+
+    res.json({ success: true, message: 'Đã reset HWID, key có thể dùng trên máy mới' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ---- Extend Key (ADMIN) ----
 app.post('/api/keys/:key/extend', requireAdmin, async (req, res) => {
   try {
@@ -260,6 +306,23 @@ app.post('/api/keys/:key/extend', requireAdmin, async (req, res) => {
   }
 });
 
+// ---- Change Key Type (ADMIN) ----
+app.post('/api/keys/:key/type', requireAdmin, async (req, res) => {
+  try {
+    const { type } = req.body;
+    if (!['basic', 'pro', 'vip'].includes(type)) {
+      return res.status(400).json({ success: false, message: 'Loại key không hợp lệ (basic, pro, vip)' });
+    }
+    const { data, error } = await supabase.from('keys').update({ type }).eq('key', req.params.key).select();
+    if (error) throw error;
+    if (!data || data.length === 0) return res.status(404).json({ success: false, message: 'Key không tồn tại' });
+    await supabase.from('activity_log').insert({ action: 'CHANGE_TYPE', key: req.params.key, detail: 'Chuyển loại thành ' + type });
+    res.json({ success: true, message: 'Đã đổi loại key thành ' + type });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ---- Stats (ADMIN) ----
 app.get('/api/stats', requireAdmin, async (req, res) => {
   try {
@@ -270,6 +333,22 @@ app.get('/api/stats', requireAdmin, async (req, res) => {
     const banned = keys.filter(k => k.status === 'banned').length;
     const expired = keys.filter(k => k.status === 'expired').length;
     res.json({ success: true, data: { total, active, banned, expired } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ---- Online Keys (ADMIN) ----
+app.get('/api/online', requireAdmin, async (req, res) => {
+  try {
+    const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
+    const { data, error } = await supabase
+      .from('keys')
+      .select('key, hwid, last_seen, status, user, type')
+      .gte('last_seen', cutoff)
+      .order('last_seen', { ascending: false });
+    if (error) throw error;
+    res.json({ success: true, data, count: data.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -293,98 +372,205 @@ app.get(['/', '/web'], (req, res) => {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROX CHEATS - Quản Lý Key</title>
+<title>PLEXUS CHEAT - Quản Lý Key</title>
 <style>
-@keyframes glow{0%,100%{box-shadow:0 0 5px #ff2020,0 0 10px #ff2020}50%{box-shadow:0 0 15px #ff2020,0 0 30px #ff202044}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',sans-serif;background:#0a0000;color:#e0d0d0;min-height:100vh}
-::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#1a0808}::-webkit-scrollbar-thumb{background:#ff202066;border-radius:3px}
-.header{background:linear-gradient(135deg,#1a0505,#2a0808);padding:25px 20px;text-align:center;border-bottom:2px solid #ff2020;animation:glow 2s infinite;position:relative}
-.header h1{color:#ff2020;font-size:26px;text-shadow:0 0 20px #ff2020,0 0 40px #ff202044;letter-spacing:2px}
-.header p{color:#ff8888;font-size:13px;margin-top:5px;opacity:0.8}
-.container{max-width:1200px;margin:20px auto;padding:0 20px;animation:fadeIn 0.5s}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:25px}
-.stat-card{background:#1a0808;padding:20px;border-radius:10px;text-align:center;border:1px solid #ff202033;transition:0.3s}
-.stat-card:hover{border-color:#ff2020;box-shadow:0 0 20px #ff202022;transform:translateY(-2px)}
-.stat-card .num{font-size:30px;font-weight:bold;color:#ff2020;text-shadow:0 0 15px #ff202066}
-.stat-card .label{color:#ff8888;font-size:13px;margin-top:5px}
-.card{background:#1a0808;border-radius:10px;padding:20px;margin-bottom:20px;border:1px solid #ff202033;transition:0.3s;animation:fadeIn 0.5s}
-.card:hover{border-color:#ff202066;box-shadow:0 0 15px #ff202011}
-.card h3{color:#ff2020;margin-bottom:15px;text-shadow:0 0 10px #ff202044;font-size:16px}
-.form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
-.form-row input,.form-row select{flex:1;min-width:150px}
-input,select,button{padding:10px 15px;border:1px solid #ff202033;border-radius:6px;background:#0d0000;color:#e0d0d0;font-size:14px;transition:0.3s}
-input:focus,select:focus{outline:none;border-color:#ff2020;box-shadow:0 0 15px #ff202033;background:#150000}
-button{cursor:pointer;font-weight:bold;letter-spacing:0.5px}
-button:hover{transform:translateY(-1px);box-shadow:0 0 20px #ff202044!important}
-.btn-primary{background:linear-gradient(135deg,#ff2020,#cc0000);color:#fff;border:none;box-shadow:0 0 10px #ff202033}
-.btn-danger{background:linear-gradient(135deg,#ff4444,#aa0000);color:#fff;border:none}
-.btn-success{background:linear-gradient(135deg,#ff2020,#cc0000);color:#fff;border:none;box-shadow:0 0 10px #ff202033}
-.btn-warning{background:linear-gradient(135deg,#ff6622,#cc4400);color:#fff;border:none}
+body{font-family:'Segoe UI',sans-serif;background:#0a0a0f;color:#cdc8c8;min-height:100vh;background-image:linear-gradient(rgba(204,51,51,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(204,51,51,0.03) 1px,transparent 1px);background-size:40px 40px}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#121216}::-webkit-scrollbar-thumb{background:#cc333366;border-radius:3px}
+.header{background:linear-gradient(135deg,#120808,#1a0a0a);padding:20px 20px;text-align:center;border-bottom:1px solid #cc333355;position:relative}
+.header h1{color:#cc3333;font-size:24px;text-shadow:0 0 12px #cc333344;letter-spacing:3px}
+.header p{color:#aa7777;font-size:12px;margin-top:4px}
+.container{max-width:1200px;margin:16px auto;padding:0 16px;animation:fadeIn 0.4s}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:#121216;padding:16px;border-radius:8px;text-align:center;border:1px solid #cc333322;transition:0.2s}
+.stat-card:hover{border-color:#cc333355}
+.stat-card .num{font-size:28px;font-weight:700;color:#cc3333;text-shadow:0 0 8px #cc333344}
+.stat-card .label{color:#aa7777;font-size:12px;margin-top:4px}
+.tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid #cc333322;padding-bottom:0}
+.tab{padding:10px 20px;border-radius:6px 6px 0 0;cursor:pointer;font-size:13px;font-weight:600;color:#886666;border:1px solid transparent;border-bottom:none;transition:0.2s;background:transparent;letter-spacing:0.3px}
+.tab:hover{color:#cc7777;background:#1a0c0c}
+.tab.active{color:#cc3333;background:#121216;border-color:#cc333322;position:relative}
+.tab.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:#121216}
+.card{background:#121216;border-radius:8px;padding:20px;margin-bottom:16px;border:1px solid #cc333322;animation:slideUp 0.3s}
+.card h3{color:#cc3333;margin-bottom:14px;font-size:15px;font-weight:600;letter-spacing:0.5px}
+.form-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.form-row input,.form-row select{flex:1;min-width:120px}
+input,select,button{padding:9px 14px;border:1px solid #cc333322;border-radius:5px;background:#0d0d11;color:#cdc8c8;font-size:13px;transition:0.2s}
+input:focus,select:focus{outline:none;border-color:#cc333388;background:#141418}
+button{cursor:pointer;font-weight:600;letter-spacing:0.3px}
+button:hover{filter:brightness(1.15)}
+.btn-primary{background:linear-gradient(135deg,#cc3333,#991111);color:#fff;border:none}
+.btn-danger{background:linear-gradient(135deg,#dd4444,#881111);color:#fff;border:none}
+.btn-success{background:linear-gradient(135deg,#cc3333,#991111);color:#fff;border:none}
+.btn-sm{padding:5px 10px;font-size:11px}
 table{width:100%;border-collapse:collapse}
-th,td{padding:12px;text-align:left;border-bottom:1px solid #ff202015;font-size:13px}
-th{background:#150303;color:#ff2020;font-weight:700;white-space:nowrap;text-shadow:0 0 5px #ff202044}
-tr:hover td{background:#200505}
-.status-active{color:#ff2020;font-weight:bold;text-shadow:0 0 10px #ff202066}
-.status-banned{color:#ff6666;font-weight:bold}
-.status-expired{color:#884444}
-.action-btn{padding:5px 12px;border-radius:4px;border:1px solid #ff202044;cursor:pointer;font-size:12px;margin:2px;background:transparent;color:#ff8888;transition:0.3s}
-.action-btn:hover{background:#ff2020;color:#fff;border-color:#ff2020;box-shadow:0 0 15px #ff202044!important;transform:none!important}
-.toast{position:fixed;bottom:20px;right:20px;padding:14px 28px;border-radius:8px;color:#fff;font-size:14px;z-index:999;display:none;animation:fadeIn 0.3s;border:1px solid}
-.toast-success{background:#2a0505;border-color:#ff2020;box-shadow:0 0 20px #ff202044}
-.toast-error{background:#2a0505;border-color:#ff4444;box-shadow:0 0 20px #ff444444}
-.loading{text-align:center;padding:40px;color:#ff8888}
-.login-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;z-index:1000}
-.login-box{background:#1a0808;padding:40px;border-radius:12px;border:1px solid #ff202044;width:380px;box-shadow:0 0 40px #ff202022;animation:fadeIn 0.5s}
-.login-box h2{color:#ff2020;margin-bottom:25px;text-align:center;font-size:22px;text-shadow:0 0 15px #ff202066}
-.login-box input{width:100%;margin-bottom:15px;text-align:center}
-.login-box button{width:100%;padding:12px;font-size:16px}
-.copy-field{font-family:monospace;color:#ff2020;font-size:15px;display:block;margin-top:5px;word-break:break-all}
+th,td{padding:10px;text-align:left;border-bottom:1px solid #cc333310;font-size:12px}
+th{background:#0e0e12;color:#cc3333;font-weight:600;white-space:nowrap;font-size:11px;letter-spacing:0.5px}
+tr:hover td{background:#18181e}
+.status-active{color:#33cc33;font-weight:600}
+.status-banned{color:#dd3333;font-weight:600}
+.status-expired{color:#cc8833;font-weight:600}
+.action-btn{padding:4px 10px;border-radius:4px;border:1px solid #cc333333;cursor:pointer;font-size:11px;margin:1px;background:transparent;color:#aa7777;transition:0.2s}
+.action-btn:hover{background:#cc3333;color:#fff;border-color:#cc3333}
+.toast{position:fixed;bottom:20px;right:20px;padding:12px 24px;border-radius:6px;color:#fff;font-size:13px;z-index:999;display:none;animation:fadeIn 0.3s;border:1px solid;max-width:400px}
+.toast-success{background:#141418;border-color:#cc333388}
+.toast-error{background:#141418;border-color:#dd444488}
+.loading{text-align:center;padding:30px;color:#886666;font-size:13px}
+.login-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(5,5,10,0.93);display:flex;align-items:center;justify-content:center;z-index:1000}
+.login-box{background:#121216;padding:36px;border-radius:10px;border:1px solid #cc333344;width:360px;animation:fadeIn 0.4s}
+.login-box h2{color:#cc3333;margin-bottom:22px;text-align:center;font-size:20px;letter-spacing:1px}
+.login-box input{width:100%;margin-bottom:12px;text-align:center}
+.login-box button{width:100%;padding:11px;font-size:14px}
+.copy-field{font-family:monospace;color:#cc3333;font-size:14px;display:block;margin-top:4px;word-break:break-all}
+.tab-content{display:none}.tab-content.active{display:block}
+.prefix-input{width:80px;flex:0 0 auto!important;text-align:center;text-transform:uppercase}
+.hint{color:#886666;font-size:11px;margin-top:4px}
+@media(max-width:768px){
+.container{padding:0 10px;margin:10px auto}.stats{grid-template-columns:repeat(2,1fr);gap:8px}.stat-card{padding:12px}.stat-card .num{font-size:22px}.tabs{overflow-x:auto;white-space:nowrap;gap:2px}.tab{padding:10px 12px;font-size:12px;display:inline-block}.card{padding:14px}.card h3{font-size:13px}.form-row{gap:6px}.form-row input,.form-row select{min-width:80px;font-size:12px;padding:8px 10px}table{font-size:11px}th,td{padding:6px 4px;font-size:10px;white-space:nowrap}.action-btn{padding:3px 6px;font-size:10px}.login-box{width:90%;max-width:360px;padding:24px}.login-box h2{font-size:18px}.login-box input{padding:10px}.copy-field{font-size:12px}.toast{font-size:12px;padding:10px 16px;right:10px;bottom:10px;max-width:90%}
+#tabCreate div[style*="grid-template-columns"]{grid-template-columns:1fr 1fr!important}#tabCreate div[style*="grid-template-columns"]>div:nth-child(1){grid-column:1/-1}
+}
+.edit-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(5,5,10,0.9);display:none;align-items:center;justify-content:center;z-index:999}
+.edit-panel{background:#121216;border:1px solid #cc333355;border-radius:10px;padding:24px;max-width:460px;width:92%;max-height:90vh;overflow-y:auto}
+.edit-panel h3{margin:0 0 16px 0;color:#cc3333;font-size:16px}
+.edit-panel .row{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.edit-panel .row label{color:#aa7777;font-size:12px;min-width:80px}
+.edit-panel .row input,.edit-panel .row select{flex:1;padding:8px 10px;min-width:0}
+.edit-panel .key-display{font-family:monospace;font-size:13px;color:#cc6666;background:#0a0a0e;padding:10px 12px;border-radius:6px;margin-bottom:14px;word-break:break-all}
+.edit-panel .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid #222}
+.edit-panel .actions .action-btn{flex:1;min-width:80px;text-align:center}
+.edit-panel .close-btn{float:right;cursor:pointer;color:#886666;font-size:18px;line-height:1}
+.edit-panel .close-btn:hover{color:#cc3333}
+
 </style>
 </head>
 <body>
-<div class="header"><h1>🔐 ROX CHEATS</h1><p>Hệ thống quản lý key xác thực</p></div>
+<div class="header"><h1>PLEXUS CHEAT</h1><p>Hệ thống quản lý key xác thực</p></div>
 <div class="login-overlay" id="loginOverlay">
 <div class="login-box">
-<h2>🔑 ĐĂNG NHẬP</h2>
+<h2>ĐĂNG NHẬP</h2>
 <input type="text" id="loginUser" placeholder="Tên đăng nhập">
 <input type="password" id="loginPass" placeholder="Mật khẩu">
 <button class="btn-primary" onclick="login()">ĐĂNG NHẬP</button>
-<button class="btn-primary" onclick="checkHealth()" style="margin-top:10px;background:transparent;border:1px solid #ff202044;font-size:12px">🩺 KIỂM TRA KẾT NỐI</button>
+<button onclick="checkHealth()" style="margin-top:8px;width:100%;background:transparent;border:1px solid #cc333344;font-size:12px;padding:8px">Kiểm tra kết nối</button>
 </div>
 </div>
 <div class="container" id="mainContent" style="display:none">
 <div class="stats" id="statsContainer"></div>
+<div class="tabs">
+<div class="tab active" onclick="switchTab('keys')" id="tabKeysBtn">Danh Sách Key</div>
+<div class="tab" onclick="switchTab('create')" id="tabCreateBtn">Tạo Key</div>
+<div class="tab" onclick="switchTab('online')" id="tabOnlineBtn">Trạng Thái Online</div>
+<div class="tab" onclick="switchTab('logs')" id="tabLogsBtn">Nhật Ký</div>
+</div>
+<div class="tab-content active" id="tabKeys">
 <div class="card">
-<h3>➕ TẠO KEY MỚI</h3>
 <div class="form-row">
-<input type="number" id="createDays" value="30" min="1" max="3650" placeholder="Số ngày">
-<input type="text" id="createUser" placeholder="Người dùng (tùy chọn)">
-<input type="text" id="createNote" placeholder="Ghi chú (tùy chọn)">
-<button class="btn-success" onclick="createKey()">🔥 TẠO KEY</button>
-</div>
-<div id="createResult" style="margin-top:10px;font-size:13px"></div>
-</div>
-<div class="card">
-<h3>📋 DANH SÁCH KEY</h3>
-<div class="form-row" style="margin-bottom:15px">
-<input type="text" id="searchInput" placeholder="🔍 Tìm key..." oninput="renderTable()">
+<input type="text" id="searchInput" placeholder="Tìm key..." oninput="renderTable()">
 <select id="statusFilter" onchange="renderTable()">
 <option value="all">Tất cả</option><option value="active">Active</option><option value="banned">Banned</option><option value="expired">Expired</option>
 </select>
-<button class="btn-primary" onclick="refreshData()">🔄 LÀM MỚI</button>
+<button class="btn-primary btn-sm" onclick="refreshData()">Làm Mới</button>
 </div>
 <div style="overflow-x:auto">
-<table><thead><tr><th>STT</th><th>MÃ KEY</th><th>TRẠNG THÁI</th><th>NGÀY TẠO</th><th>HẾT HẠN</th><th>HWID</th><th>NGƯỜI DÙNG</th><th>GHI CHÚ</th><th>HÀNH ĐỘNG</th></tr></thead>
-<tbody id="keyTableBody"><tr><td colspan="9" class="loading">Đang tải dữ liệu...</td></tr></tbody></table>
+<table><thead><tr><th>STT</th><th>MÃ KEY</th><th>LOẠI</th><th>TRẠNG THÁI</th><th>NGÀY TẠO</th><th>HẾT HẠN</th><th>HWID</th><th>NGƯỜI DÙNG</th><th>GHI CHÚ</th><th>HÀNH ĐỘNG</th></tr></thead>
+<tbody id="keyTableBody"><tr><td colspan="10" class="loading">Đang tải dữ liệu...</td></tr></tbody></table>
 </div>
 </div>
+</div>
+<div class="tab-content" id="tabCreate">
 <div class="card">
-<h3>📜 NHẬT KÝ HOẠT ĐỘNG</h3>
+<h3>Tạo Key Mới</h3>
+<div style="display:grid;grid-template-columns:1fr 120px 80px 1fr 1fr;gap:10px;margin-bottom:10px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:4px">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">TIỀN TỐ + ĐỘ DÀI</label>
+<div style="display:flex;align-items:center;gap:4px">
+<input type="text" id="createPrefix" placeholder="PLX" maxlength="8" value="PLX" style="width:65px;flex:none;text-align:center;text-transform:uppercase;padding:9px 6px">
+<span style="color:#886666;font-size:13px">-</span>
+<select id="suffixGroups" style="flex:1;padding:9px 6px">
+<option value="8">2 nhóm</option>
+<option value="12" selected>3 nhóm</option>
+<option value="16">4 nhóm</option>
+<option value="20">5 nhóm</option>
+<option value="24">6 nhóm</option>
+</select>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NGÀY HẾT HẠN</label>
+<input type="number" id="createDays" value="30" min="1" max="3650">
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">SỐ LƯỢNG</label>
+<input type="number" id="createCount" value="1" min="1" max="500">
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;max-width:100px">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">LOẠI KEY</label>
+<select id="createType" style="padding:9px 8px">
+<option value="basic">Basic</option>
+<option value="pro">Pro</option>
+<option value="vip">VIP</option>
+</select>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NGƯỜI DÙNG</label>
+<input type="text" id="createUser" placeholder="Không bắt buộc">
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">GHI CHÚ</label>
+<input type="text" id="createNote" placeholder="Không bắt buộc">
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<button class="btn-success" onclick="createKey()" id="createBtn">Tạo Key</button>
+<small style="color:#886666">Để trống tiền tố để tạo key random dài (32 ký tự).</small>
+</div>
+<div id="createResult"></div>
+</div>
+</div>
+<div class="tab-content" id="tabOnline">
+<div class="card">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+<h3 style="margin:0">Trạng Thái Online</h3>
+<div style="display:flex;align-items:center;gap:8px">
+<small id="onlineCount" style="color:#33cc33;font-weight:600">0 key online</small>
+<button class="btn-primary btn-sm" onclick="refreshOnline()">Làm Mới</button>
+</div>
+</div>
+<div style="overflow-x:auto">
+<table><thead><tr><th>STT</th><th>MÃ KEY</th><th>LOẠI</th><th>HWID</th><th>NGƯỜI DÙNG</th><th>LẦN CUỐI</th><th>TRẠNG THÁI</th></tr></thead>
+<tbody id="onlineTableBody"><tr><td colspan="7" class="loading">Đang tải...</td></tr></tbody></table>
+</div>
+</div>
+</div>
+<div class="tab-content" id="tabLogs">
+<div class="card">
+<h3>Nhật Ký Hoạt Động</h3>
 <div style="overflow-x:auto">
 <table><thead><tr><th>ID</th><th>HÀNH ĐỘNG</th><th>KEY</th><th>CHI TIẾT</th><th>THỜI GIAN</th></tr></thead>
 <tbody id="logTableBody"><tr><td colspan="5" class="loading">Đang tải...</td></tr></tbody></table>
+</div>
+</div>
+</div>
+</div>
+<div class="edit-overlay" id="editOverlay" onclick="if(event.target===this)closeEditPanel()">
+<div class="edit-panel" id="editPanel">
+<span class="close-btn" onclick="closeEditPanel()">&times;</span>
+<h3 id="editPanelTitle">Chỉnh Sửa Key</h3>
+<div class="key-display" id="editKeyDisplay">-</div>
+<div class="row"><label>Loại Key</label><select id="editKeyType"><option value="basic">Basic</option><option value="pro">Pro</option><option value="vip">VIP</option></select><button class="btn-primary btn-sm" onclick="saveKeyType()">Lưu</button></div>
+<div class="row"><label>Trạng Thái</label><span id="editKeyStatus" style="font-weight:600"></span></div>
+<div class="row"><label>Hạn Đến</label><span id="editKeyExpiry" style="color:#886666"></span></div>
+<div class="row"><label>HWID</label><span id="editKeyHwid" style="font-family:monospace;font-size:11px;color:#cc6666"></span></div>
+<div class="row"><label>Người Dùng</label><span id="editKeyUser" style="color:#886666"></span></div>
+<div class="row"><label>Ghi Chú</label><span id="editKeyNote" style="color:#886666"></span></div>
+<div class="row" id="editExtendRow"><label>Gia Hạn (ngày)</label><input type="number" id="editExtendDays" value="30" min="1" max="3650" style="max-width:100px"><button class="btn-primary btn-sm" onclick="extendCurrentKey()">Gia Hạn</button></div>
+<div class="actions">
+<button class="action-btn" id="editBanBtn" onclick="toggleBanKey()">Khóa</button>
+<button class="action-btn" onclick="resetHwidCurrent()">Reset HWID</button>
+<button class="action-btn" onclick="deleteCurrentKey()">Xóa</button>
+<button class="action-btn" onclick="copyCurrentKey()">Copy</button>
 </div>
 </div>
 </div>
@@ -392,20 +578,28 @@ tr:hover td{background:#200505}
 <script>
 const BASE=window.location.origin;
 let authToken='',allKeys=[],allLogs=[];
-function login(){const u=document.getElementById('loginUser').value,p=document.getElementById('loginPass').value;if(!u||!p)return showToast('Vui lòng nhập đầy đủ thông tin','error');authToken=btoa(u+':'+p);fetch(BASE+'/api/keys',{headers:{'Authorization':'Basic '+authToken}}).then(r=>{if(r.ok){document.getElementById('loginOverlay').style.display='none';document.getElementById('mainContent').style.display='block';refreshData()}else if(r.status===401){showToast('Sai thông tin đăng nhập','error');authToken=''}else{showToast('Lỗi server (HTTP '+r.status+')','error');authToken=''}}).catch(e=>{showToast('Lỗi kết nối: '+e.message,'error');authToken='';console.error('Login error:',e)})}
-function checkHealth(){fetch(BASE+'/api/health').then(r=>r.json()).then(d=>{showToast('✅ Server OK - Admin: '+d.admin,'success')}).catch(e=>{showToast('❌ Server không phản hồi: '+e.message,'error');console.error('Health error:',e)})}
+function login(){const u=document.getElementById('loginUser').value,p=document.getElementById('loginPass').value;if(!u||!p)return showToast('Nhập đầy đủ thông tin','error');authToken=btoa(u+':'+p);fetch(BASE+'/api/keys',{headers:{'Authorization':'Basic '+authToken}}).then(r=>{if(r.ok){document.getElementById('loginOverlay').style.display='none';document.getElementById('mainContent').style.display='block';refreshData()}else if(r.status===401){showToast('Sai thông tin đăng nhập','error');authToken=''}else{showToast('Lỗi server (HTTP '+r.status+')','error');authToken=''}}).catch(e=>{showToast('Lỗi kết nối: '+e.message,'error');authToken='';console.error('Login:',e)})}
+function checkHealth(){fetch(BASE+'/api/health').then(r=>r.json()).then(d=>{showToast('Server OK | Admin: '+d.admin+' | Supabase: '+d.supabase+(d.keys_count!==undefined?' | Keys: '+d.keys_count:''),'success')}).catch(e=>{showToast('Server không phản hồi: '+e.message,'error');console.error('Health:',e)})}
 function showToast(m,t){const e=document.getElementById('toast');e.textContent=m;e.className='toast toast-'+t;e.style.display='block';setTimeout(()=>e.style.display='none',3500)}
 function api(p,o){o=o||{};o.headers=o.headers||{};o.headers['Authorization']='Basic '+authToken;return fetch(BASE+p,o).then(r=>r.json())}
+let onlineTimer;function switchTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));document.getElementById(t+'TabBtn').classList.add('active');document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('active');if(onlineTimer)clearInterval(onlineTimer);if(t==='online'){refreshOnline();onlineTimer=setInterval(refreshOnline,5000)}}
 function refreshData(){Promise.all([api('/api/keys').then(r=>allKeys=r.data||[]),api('/api/logs').then(r=>allLogs=r.data||[]),api('/api/stats').then(r=>{if(r.data)renderStats(r.data)})]).then(()=>{renderTable();renderLogs()}).catch(()=>showToast('Lỗi tải dữ liệu','error'))}
-function renderStats(d){document.getElementById('statsContainer').innerHTML='<div class="stat-card"><div class="num">'+d.total+'</div><div class="label">Tổng Key</div></div><div class="stat-card"><div class="num">'+d.active+'</div><div class="label">Đang Hoạt Động</div></div><div class="stat-card"><div class="num">'+d.banned+'</div><div class="label">Bị Khóa</div></div><div class="stat-card"><div class="num">'+d.expired+'</div><div class="label">Hết Hạn</div></div>'}
-function renderTable(){const s=document.getElementById('searchInput').value.toLowerCase(),f=document.getElementById('statusFilter').value;let k=allKeys;if(s)k=k.filter(x=>x.key.toLowerCase().includes(s));if(f!=='all')k=k.filter(x=>x.status===f);const t=document.getElementById('keyTableBody');if(!k.length){t.innerHTML='<tr><td colspan="9" style="text-align:center;color:#ff8888">Không có dữ liệu</td></tr>';return}t.innerHTML=k.map((x,i)=>{const c='status-'+x.status,st=x.status==='active'?'✅ Active':x.status==='banned'?'🚫 Banned':'⏰ Expired';return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td class="'+c+'">'+st+'</td><td>'+new Date(x.created_at).toLocaleDateString('vi-VN')+'</td><td>'+new Date(x.expires_at).toLocaleDateString('vi-VN')+'</td><td style="font-family:monospace;font-size:11px;color:#ff6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+(x.note||'-')+'</td><td nowrap>'+(x.status==='active'?'<button class="action-btn" onclick="banKey(\\''+x.key+'\\')">🚫 Khóa</button>':'')+(x.status==='banned'?'<button class="action-btn" onclick="unbanKey(\\''+x.key+'\\')">✅ Mở</button>':'')+'<button class="action-btn" onclick="extendKey(\\''+x.key+'\\')">📅 Gia Hạn</button><button class="action-btn" onclick="deleteKey(\\''+x.key+'\\')">🗑 Xóa</button><button class="action-btn" onclick="copyKey(\\''+x.key+'\\')">📋 Copy</button></td></tr>'}).join('')}
-function renderLogs(){const t=document.getElementById('logTableBody');if(!allLogs.length){t.innerHTML='<tr><td colspan="5" style="text-align:center;color:#ff8888">Không có dữ liệu</td></tr>';return}t.innerHTML=allLogs.slice(0,50).map(x=>'<tr><td>'+x.id+'</td><td style="color:#ff2020;font-weight:bold">'+x.action+'</td><td class="copy-field">'+x.key+'</td><td>'+x.detail+'</td><td>'+new Date(x.created_at).toLocaleString('vi-VN')+'</td></tr>').join('')}
-function createKey(){const d=document.getElementById('createDays').value,u=document.getElementById('createUser').value,n=document.getElementById('createNote').value,btn=document.querySelector('.btn-success');btn.disabled=true;btn.textContent='⏳ ĐANG TẠO...';api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:parseInt(d),user:u,note:n})}).then(r=>{if(r.success){document.getElementById('createResult').innerHTML='<div style="background:#150303;padding:15px;border-radius:8px;border:1px solid #ff202066"><strong style="color:#ff2020;text-shadow:0 0 10px #ff202044">✅ KEY MỚI ĐÃ TẠO:</strong><span class="copy-field">'+r.data.key+'</span><span style="color:#ff8888;font-size:12px">📅 Hạn: '+new Date(r.data.expires_at).toLocaleDateString('vi-VN')+'</span></div>';refreshData()}else showToast(r.message,'error')}).catch(()=>showToast('Lỗi tạo key','error')).finally(()=>{btn.disabled=false;btn.textContent='🔥 TẠO KEY'})}
-function banKey(k){if(confirm('🔒 Khóa key '+k+'?'))api('/api/keys/'+encodeURIComponent(k)+'/ban',{method:'POST'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success)refreshData()})}
-function unbanKey(k){if(confirm('🔓 Mở khóa key '+k+'?'))api('/api/keys/'+encodeURIComponent(k)+'/unban',{method:'POST'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success)refreshData()})}
-function deleteKey(k){if(confirm('🗑 Xóa key '+k+'? Không thể hoàn tác!'))api('/api/keys/'+encodeURIComponent(k),{method:'DELETE'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success)refreshData()})}
-function copyKey(k){navigator.clipboard.writeText(k).then(()=>showToast('📋 Đã copy key: '+k,'success'))}
-function extendKey(k){const d=prompt('📅 Nhập số ngày gia hạn:','30');if(!d||isNaN(d)||parseInt(d)<1)return;api('/api/keys/'+encodeURIComponent(k)+'/extend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:parseInt(d)})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success)refreshData()})}
+function refreshOnline(){api('/api/online').then(r=>{renderOnline(r.data||[]);const e=document.getElementById('onlineCount');if(e)e.textContent=r.count+' key online'}).catch(()=>{})}
+function renderOnline(d){const t=document.getElementById('onlineTableBody');if(!t)return;if(!d.length){t.innerHTML='<tr><td colspan="7" style="text-align:center;color:#886666">Không có key online</td></tr>';return}t.innerHTML=d.map((x,i)=>{const st=x.status==='active'?'<span style="color:#33cc33">Active</span>':'<span style="color:#dd3333">'+x.status+'</span>';const ls=x.last_seen?new Date(x.last_seen).toLocaleTimeString('vi-VN'):'-';const tp=x.type||'basic';return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+ls+'</td><td>'+st+'</td></tr>'}).join('')}
+function renderStats(d){document.getElementById('statsContainer').innerHTML='<div class="stat-card"><div class="num">'+d.total+'</div><div class="label">Tổng Key</div></div><div class="stat-card"><div class="num">'+d.active+'</div><div class="label">Hoạt Động</div></div><div class="stat-card"><div class="num">'+d.banned+'</div><div class="label">Bị Khóa</div></div><div class="stat-card"><div class="num">'+d.expired+'</div><div class="label">Hết Hạn</div></div>'}
+function renderTable(){const s=document.getElementById('searchInput').value.toLowerCase(),f=document.getElementById('statusFilter').value;let k=allKeys;if(s)k=k.filter(x=>x.key.toLowerCase().includes(s));if(f!=='all')k=k.filter(x=>x.status===f);const t=document.getElementById('keyTableBody');if(!k.length){t.innerHTML='<tr><td colspan="10" style="text-align:center;color:#886666">Không có dữ liệu</td></tr>';return}t.innerHTML=k.map((x,i)=>{const c='status-'+x.status,st=x.status==='active'?'Active':x.status==='banned'?'Banned':'Expired',tp=x.type||'basic';return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td class="'+c+'">'+st+'</td><td>'+new Date(x.created_at).toLocaleDateString('vi-VN')+'</td><td>'+new Date(x.expires_at).toLocaleDateString('vi-VN')+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+(x.note||'-')+'</td><td nowrap><button class="action-btn" onclick="showEditPanel(\''+x.key.replace(/'/g,"\\'")+'\')">Chỉnh sửa</button></td></tr>'}).join('')}
+function renderLogs(){const t=document.getElementById('logTableBody');if(!allLogs.length){t.innerHTML='<tr><td colspan="5" style="text-align:center;color:#886666">Không có dữ liệu</td></tr>';return}t.innerHTML=allLogs.slice(0,50).map(x=>'<tr><td>'+x.id+'</td><td style="color:#cc3333;font-weight:600">'+x.action+'</td><td class="copy-field">'+x.key+'</td><td>'+x.detail+'</td><td>'+new Date(x.created_at).toLocaleString('vi-VN')+'</td></tr>').join('')}
+function createKey(){const p=document.getElementById('createPrefix').value.trim(),d=document.getElementById('createDays').value,c=document.getElementById('createCount').value,g=parseInt(document.getElementById('suffixGroups').value),u=document.getElementById('createUser').value.trim(),n=document.getElementById('createNote').value.trim(),t=document.getElementById('createType').value,btn=document.getElementById('createBtn');const body={days:parseInt(d),count:parseInt(c),type:t};if(p){body.prefix=p;body.suffixLength=g}if(u)body.user=u;if(n)body.note=n;btn.disabled=true;btn.textContent='Đang tạo...';api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){let html='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px">';const exp=new Date((Array.isArray(r.data)?r.data[0]:r.data).expires_at).toLocaleDateString('vi-VN');if(r.count>1){html+='<div style="color:#cc3333;font-weight:600;margin-bottom:8px">Đã tạo '+r.count+' key (hạn: '+exp+'):</div><div style="max-height:300px;overflow-y:auto">';r.data.forEach((x,i)=>{html+='<div style="padding:6px 10px;margin:3px 0;background:#0d0d11;border-radius:4px;border:1px solid #cc333315;display:flex;align-items:center;gap:8px">'+(i+1)+'. <span class="copy-field" style="font-size:13px;margin:0;flex:1">'+x.key+'</span><button class="action-btn" onclick="copyKey(\\''+x.key+'\\')">Copy</button></div>'});html+='</div>'}else{html+='<div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key mới đã tạo:</div><span class="copy-field">'+r.data.key+'</span><div style="color:#886666;font-size:12px;margin-top:6px">Hết hạn: '+exp+'</div>'}html+='</div>';document.getElementById('createResult').innerHTML=html;refreshData()}else showToast(r.message,'error')}).catch(()=>showToast('Lỗi tạo key','error')).finally(()=>{btn.disabled=false;btn.textContent='Tạo Key'})}
+function copyKey(k){navigator.clipboard.writeText(k).then(()=>showToast('Đã copy: '+k,'success'))}
+let editKeyData=null;
+function showEditPanel(k){editKeyData=allKeys.find(x=>x.key===k);const x=editKeyData;if(!x)return showToast('Không tìm thấy key','error');document.getElementById('editPanelTitle').textContent='Chỉnh Sửa Key';document.getElementById('editKeyDisplay').textContent=x.key;document.getElementById('editKeyType').value=x.type||'basic';const st=x.status==='active'?'Active (Hoạt động)':x.status==='banned'?'Banned (Bị khóa)':'Expired (Hết hạn)';document.getElementById('editKeyStatus').textContent=st;document.getElementById('editKeyStatus').style.color=x.status==='active'?'#33cc33':x.status==='banned'?'#dd3333':'#cccc33';document.getElementById('editKeyExpiry').textContent=new Date(x.expires_at).toLocaleString('vi-VN');document.getElementById('editKeyHwid').textContent=x.hwid||'Chưa có';document.getElementById('editKeyUser').textContent=x.user||'-';document.getElementById('editKeyNote').textContent=x.note||'-';const banBtn=document.getElementById('editBanBtn');banBtn.textContent=x.status==='active'?'Khóa (Ban)':'Mở (Unban)';banBtn.style.background=x.status==='active'?'#cc3333':'#336633';document.getElementById('editOverlay').style.display='flex'}
+function closeEditPanel(){document.getElementById('editOverlay').style.display='none';editKeyData=null}
+function saveKeyType(){const x=editKeyData;if(!x)return;const t=document.getElementById('editKeyType').value;if(t===x.type)return showToast('Loại key không thay đổi','success');api('/api/keys/'+encodeURIComponent(x.key)+'/type',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:t})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){x.type=t;refreshData();closeEditPanel()}})}
+function extendCurrentKey(){const x=editKeyData;if(!x)return;const d=document.getElementById('editExtendDays').value;if(!d||isNaN(d)||parseInt(d)<1)return;api('/api/keys/'+encodeURIComponent(x.key)+'/extend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:parseInt(d)})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
+function toggleBanKey(){const x=editKeyData;if(!x)return;const isBan=x.status==='active',action=isBan?'ban':'unban',msg=isBan?'Khóa key '+x.key+'?':'Mở key '+x.key+'?';if(!confirm(msg))return;api('/api/keys/'+encodeURIComponent(x.key)+'/'+action,{method:'POST'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
+function resetHwidCurrent(){const x=editKeyData;if(!x)return;if(!confirm('Reset HWID cho key '+x.key+'?'))return;api('/api/keys/'+encodeURIComponent(x.key)+'/reset-hwid',{method:'POST'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
+function deleteCurrentKey(){const x=editKeyData;if(!x)return;if(!confirm('Xóa key '+x.key+'?'))return;api('/api/keys/'+encodeURIComponent(x.key),{method:'DELETE'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
+function copyCurrentKey(){const x=editKeyData;if(!x)return;navigator.clipboard.writeText(x.key).then(()=>showToast('Đã copy: '+x.key,'success'))}
 </script>
 </body>
 </html>`);
