@@ -57,9 +57,9 @@ function requireAdmin(req, res, next) {
 // ---- Health Check (PUBLIC) ----
 app.get('/api/health', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('keys').select('id', { count: 'exact', head: true });
+    const { count, error } = await supabase.from('keys').select('*', { count: 'exact', head: true });
     if (error) throw error;
-    res.json({ success: true, message: 'Server is running', admin: ADMIN_USER || 'admin', supabase: 'connected', keys_count: data ? data.length : 0 });
+    res.json({ success: true, message: 'Server is running', admin: ADMIN_USER || 'admin', supabase: 'connected', keys_count: count || 0 });
   } catch (err) {
     res.json({ success: true, message: 'Server is running', admin: ADMIN_USER || 'admin', supabase: 'error: ' + err.message });
   }
@@ -89,7 +89,7 @@ app.get('/api/verify', async (req, res) => {
 
     const { data: keys, error } = await supabase
       .from('keys')
-      .select('key, status, expires_at, hwid, type')
+      .select('key, status, expires_at, hwid, type, duration_days')
       .eq('key', key);
 
     if (error) throw error;
@@ -108,12 +108,14 @@ app.get('/api/verify', async (req, res) => {
       return res.json({ success: false, status: 'expired', message: 'Key đã hết hạn' });
     }
 
-    // Check expiry
+    // Check expiry (skip if chưa kích hoạt lần đầu)
     const now = new Date();
-    const expires = new Date(record.expires_at);
-    if (now > expires) {
-      await supabase.from('keys').update({ status: 'expired' }).eq('key', key);
-      return res.json({ success: false, status: 'expired', message: 'Key đã hết hạn' });
+    if (record.expires_at) {
+      const expires = new Date(record.expires_at);
+      if (now > expires) {
+        await supabase.from('keys').update({ status: 'expired' }).eq('key', key);
+        return res.json({ success: false, status: 'expired', message: 'Key đã hết hạn' });
+      }
     }
 
     // Check HWID
@@ -121,9 +123,17 @@ app.get('/api/verify', async (req, res) => {
       return res.json({ success: false, status: 'hwid_mismatch', message: 'Key đã được sử dụng trên thiết bị khác' });
     }
 
-    // Bind HWID on first use
+    // Bind HWID on first use (kích hoạt lần đầu → bắt đầu đếm ngược)
     if (!record.hwid || record.hwid === '') {
-      await supabase.from('keys').update({ hwid }).eq('key', key);
+      const updateData = { hwid };
+      if (!record.expires_at && record.duration_days) {
+        const firstExpiry = new Date(now.getTime() + record.duration_days * 24 * 60 * 60 * 1000);
+        updateData.expires_at = firstExpiry.toISOString();
+      }
+      await supabase.from('keys').update(updateData).eq('key', key);
+      // Re-fetch để trả về expires_at mới
+      const { data: updated } = await supabase.from('keys').select('expires_at').eq('key', key);
+      if (updated && updated.length > 0) record.expires_at = updated[0].expires_at;
     }
 
     // Update last_seen
@@ -156,7 +166,7 @@ app.post('/api/keys', requireAdmin, async (req, res) => {
     const keyType = ['basic', 'pro', 'vip'].includes(rawType) ? rawType : 'basic';
     const num = Math.min(Math.max(parseInt(count) || 1, 1), 500);
     const now = new Date();
-    const expires = new Date(now.getTime() + parseInt(days) * 24 * 60 * 60 * 1000);
+    const durationDays = parseInt(days) || 30;
     const usePrefix = rawPrefix && rawPrefix.trim();
     const suffixLen = parseInt(rawSuffixLen) || (usePrefix ? 12 : 32);
 
@@ -164,14 +174,15 @@ app.post('/api/keys', requireAdmin, async (req, res) => {
     for (let i = 0; i < num; i++) {
       const randomPart = generateKey(suffixLen);
       const newKey = usePrefix ? rawPrefix.trim().toUpperCase() + '-' + randomPart : randomPart;
-      keys.push({ key: newKey, days: parseInt(days), expires_at: expires.toISOString(), type: keyType });
+      keys.push({ key: newKey, duration_days: durationDays, type: keyType });
     }
 
     const inserts = keys.map(k => ({
       key: k.key,
       status: 'active',
       created_at: now.toISOString(),
-      expires_at: k.expires_at,
+      expires_at: null,
+      duration_days: durationDays,
       hwid: '',
       user: user || '',
       note: note || '',
@@ -326,12 +337,13 @@ app.post('/api/keys/:key/type', requireAdmin, async (req, res) => {
 // ---- Stats (ADMIN) ----
 app.get('/api/stats', requireAdmin, async (req, res) => {
   try {
-    const { data: keys, error } = await supabase.from('keys').select('status');
+    const { data: keys, error } = await supabase.from('keys').select('status,expires_at');
     if (error) throw error;
     const total = keys.length;
-    const active = keys.filter(k => k.status === 'active').length;
+    const now = new Date().toISOString();
+    const active = keys.filter(k => k.status === 'active' && (k.expires_at === null || k.expires_at > now)).length;
+    const expired = keys.filter(k => k.status === 'expired' || (k.status === 'active' && k.expires_at !== null && k.expires_at <= now)).length;
     const banned = keys.filter(k => k.status === 'banned').length;
-    const expired = keys.filter(k => k.status === 'expired').length;
     res.json({ success: true, data: { total, active, banned, expired } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -412,6 +424,7 @@ tr:hover td{background:#18181e}
 .status-active{color:#33cc33;font-weight:600}
 .status-banned{color:#dd3333;font-weight:600}
 .status-expired{color:#cc8833;font-weight:600}
+.status-pending{color:#aa7777;font-weight:600}
 .action-btn{padding:4px 10px;border-radius:4px;border:1px solid #cc333333;cursor:pointer;font-size:11px;margin:1px;background:transparent;color:#aa7777;transition:0.2s}
 .action-btn:hover{background:#cc3333;color:#fff;border-color:#cc3333}
 .toast{position:fixed;bottom:20px;right:20px;padding:12px 24px;border-radius:6px;color:#fff;font-size:13px;z-index:999;display:none;animation:fadeIn 0.3s;border:1px solid;max-width:400px}
@@ -469,7 +482,7 @@ tr:hover td{background:#18181e}
 <div class="form-row">
 <input type="text" id="searchInput" placeholder="Tìm key..." oninput="renderTable()">
 <select id="statusFilter" onchange="renderTable()">
-<option value="all">Tất cả</option><option value="active">Active</option><option value="banned">Banned</option><option value="expired">Expired</option>
+<option value="all">Tất cả</option><option value="pending">Chưa kích hoạt</option><option value="active">Hoạt động</option><option value="banned">Bị khóa</option><option value="expired">Hết hạn</option>
 </select>
 <button class="btn-primary btn-sm" onclick="refreshData()">Làm Mới</button>
 </div>
@@ -582,17 +595,17 @@ function login(){const u=document.getElementById('loginUser').value,p=document.g
 function checkHealth(){fetch(BASE+'/api/health').then(r=>r.json()).then(d=>{showToast('Server OK | Admin: '+d.admin+' | Supabase: '+d.supabase+(d.keys_count!==undefined?' | Keys: '+d.keys_count:''),'success')}).catch(e=>{showToast('Server không phản hồi: '+e.message,'error');console.error('Health:',e)})}
 function showToast(m,t){const e=document.getElementById('toast');e.textContent=m;e.className='toast toast-'+t;e.style.display='block';setTimeout(()=>e.style.display='none',3500)}
 function api(p,o){o=o||{};o.headers=o.headers||{};o.headers['Authorization']='Basic '+authToken;return fetch(BASE+p,o).then(r=>r.json())}
-let onlineTimer;function switchTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));const cap=t.charAt(0).toUpperCase()+t.slice(1);document.getElementById('tab'+cap+'Btn').classList.add('active');document.getElementById('tab'+cap).classList.add('active');if(onlineTimer)clearInterval(onlineTimer);if(t==='online'){refreshOnline();onlineTimer=setInterval(refreshOnline,5000)}}
+function st(x){if(x.status==="banned")return{cls:"status-banned",txt:"Bị khóa"};if(x.status==="expired")return{cls:"status-expired",txt:"Hết hạn"};if(!x.expires_at)return{cls:"status-pending",txt:"Chưa kích hoạt"};var e=new Date(x.expires_at);if(e<=new Date())return{cls:"status-expired",txt:"Hết hạn"};return{cls:"status-active",txt:"Hoạt động"}}let onlineTimer;function switchTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));const cap=t.charAt(0).toUpperCase()+t.slice(1);document.getElementById('tab'+cap+'Btn').classList.add('active');document.getElementById('tab'+cap).classList.add('active');if(onlineTimer)clearInterval(onlineTimer);if(t==='online'){refreshOnline();onlineTimer=setInterval(refreshOnline,5000)}}
 function refreshData(){Promise.all([api('/api/keys').then(r=>allKeys=r.data||[]),api('/api/logs').then(r=>allLogs=r.data||[]),api('/api/stats').then(r=>{if(r.data)renderStats(r.data)})]).then(()=>{renderTable();renderLogs()}).catch(()=>showToast('Lỗi tải dữ liệu','error'))}
 function refreshOnline(){api('/api/online').then(r=>{renderOnline(r.data||[]);const e=document.getElementById('onlineCount');if(e)e.textContent=r.count+' key online'}).catch(()=>{})}
-function renderOnline(d){const t=document.getElementById('onlineTableBody');if(!t)return;if(!d.length){t.innerHTML='<tr><td colspan="7" style="text-align:center;color:#886666">Không có key online</td></tr>';return}t.innerHTML=d.map((x,i)=>{const st=x.status==='active'?'<span style="color:#33cc33">Active</span>':'<span style="color:#dd3333">'+x.status+'</span>';const ls=x.last_seen?new Date(x.last_seen).toLocaleTimeString('vi-VN'):'-';const tp=x.type||'basic';return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+ls+'</td><td>'+st+'</td></tr>'}).join('')}
+function renderOnline(d){const t=document.getElementById('onlineTableBody');if(!t)return;if(!d.length){t.innerHTML='<tr><td colspan="7" style="text-align:center;color:#886666">Không có key online</td></tr>';return}t.innerHTML=d.map((x,i)=>{var st_=st(x),st='<span style="color:'+(st_.cls==='status-active'?'#33cc33':st_.cls==='status-pending'?'#aa7777':'#dd3333')+'">'+st_.txt+'</span>';const ls=x.last_seen?new Date(x.last_seen).toLocaleTimeString('vi-VN'):'-';const tp=x.type||'basic';return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+ls+'</td><td>'+st+'</td></tr>'}).join('')}
 function renderStats(d){document.getElementById('statsContainer').innerHTML='<div class="stat-card"><div class="num">'+d.total+'</div><div class="label">Tổng Key</div></div><div class="stat-card"><div class="num">'+d.active+'</div><div class="label">Hoạt Động</div></div><div class="stat-card"><div class="num">'+d.banned+'</div><div class="label">Bị Khóa</div></div><div class="stat-card"><div class="num">'+d.expired+'</div><div class="label">Hết Hạn</div></div>'}
-function renderTable(){const s=document.getElementById('searchInput').value.toLowerCase(),f=document.getElementById('statusFilter').value;let k=allKeys;if(s)k=k.filter(x=>x.key.toLowerCase().includes(s));if(f!=='all')k=k.filter(x=>x.status===f);const t=document.getElementById('keyTableBody');if(!k.length){t.innerHTML='<tr><td colspan="10" style="text-align:center;color:#886666">Không có dữ liệu</td></tr>';return}t.innerHTML=k.map((x,i)=>{const c='status-'+x.status,st=x.status==='active'?'Active':x.status==='banned'?'Banned':'Expired',tp=x.type||'basic';return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td class="'+c+'">'+st+'</td><td>'+new Date(x.created_at).toLocaleDateString('vi-VN')+'</td><td>'+new Date(x.expires_at).toLocaleDateString('vi-VN')+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+(x.note||'-')+'</td><td nowrap><button class="action-btn" onclick="showEditPanel(\\''+x.key.replace(/'/g,"\\'")+'\\')">Chỉnh sửa</button></td></tr>'}).join('')}
+function renderTable(){const s=document.getElementById('searchInput').value.toLowerCase(),f=document.getElementById('statusFilter').value;let k=allKeys;if(s)k=k.filter(x=>x.key.toLowerCase().includes(s));if(f!=='all')k=k.filter(function(x){var s_=st(x);return s_.cls==='status-'+f||s_.txt.toLowerCase()===f});const t=document.getElementById('keyTableBody');if(!k.length){t.innerHTML='<tr><td colspan="10" style="text-align:center;color:#886666">Không có dữ liệu</td></tr>';return}t.innerHTML=k.map((x,i)=>{var s_=st(x),c=s_.cls,st=s_.txt,tp=x.type||'basic';return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td class="'+c+'">'+st+'</td><td>'+new Date(x.created_at).toLocaleDateString('vi-VN')+'</td><td>'+(x.expires_at?new Date(x.expires_at).toLocaleDateString('vi-VN'):'<span style=color:#666>Chưa kích hoạt</span>')+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+(x.note||'-')+'</td><td nowrap><button class="action-btn" onclick="showEditPanel(\\''+x.key.replace(/'/g,"\\'")+'\\')">Chỉnh sửa</button></td></tr>'}).join('')}
 function renderLogs(){const t=document.getElementById('logTableBody');if(!allLogs.length){t.innerHTML='<tr><td colspan="5" style="text-align:center;color:#886666">Không có dữ liệu</td></tr>';return}t.innerHTML=allLogs.slice(0,50).map(x=>'<tr><td>'+x.id+'</td><td style="color:#cc3333;font-weight:600">'+x.action+'</td><td class="copy-field">'+x.key+'</td><td>'+x.detail+'</td><td>'+new Date(x.created_at).toLocaleString('vi-VN')+'</td></tr>').join('')}
-function createKey(){const p=document.getElementById('createPrefix').value.trim(),d=document.getElementById('createDays').value,c=document.getElementById('createCount').value,g=parseInt(document.getElementById('suffixGroups').value),u=document.getElementById('createUser').value.trim(),n=document.getElementById('createNote').value.trim(),t=document.getElementById('createType').value,btn=document.getElementById('createBtn');const body={days:parseInt(d),count:parseInt(c),type:t};if(p){body.prefix=p;body.suffixLength=g}if(u)body.user=u;if(n)body.note=n;btn.disabled=true;btn.textContent='Đang tạo...';api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){let html='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px">';const exp=new Date((Array.isArray(r.data)?r.data[0]:r.data).expires_at).toLocaleDateString('vi-VN');if(r.count>1){html+='<div style="color:#cc3333;font-weight:600;margin-bottom:8px">Đã tạo '+r.count+' key (hạn: '+exp+'):</div><div style="max-height:300px;overflow-y:auto">';r.data.forEach((x,i)=>{html+='<div style="padding:6px 10px;margin:3px 0;background:#0d0d11;border-radius:4px;border:1px solid #cc333315;display:flex;align-items:center;gap:8px">'+(i+1)+'. <span class="copy-field" style="font-size:13px;margin:0;flex:1">'+x.key+'</span><button class="action-btn" onclick="copyKey(\\''+x.key+'\\')">Copy</button></div>'});html+='</div>'}else{html+='<div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key mới đã tạo:</div><span class="copy-field">'+r.data.key+'</span><div style="color:#886666;font-size:12px;margin-top:6px">Hết hạn: '+exp+'</div>'}html+='</div>';document.getElementById('createResult').innerHTML=html;refreshData()}else showToast(r.message,'error')}).catch(()=>showToast('Lỗi tạo key','error')).finally(()=>{btn.disabled=false;btn.textContent='Tạo Key'})}
+function createKey(){const p=document.getElementById('createPrefix').value.trim(),d=document.getElementById('createDays').value,c=document.getElementById('createCount').value,g=parseInt(document.getElementById('suffixGroups').value),u=document.getElementById('createUser').value.trim(),n=document.getElementById('createNote').value.trim(),t=document.getElementById('createType').value,btn=document.getElementById('createBtn');const body={days:parseInt(d),count:parseInt(c),type:t};if(p){body.prefix=p;body.suffixLength=g}if(u)body.user=u;if(n)body.note=n;btn.disabled=true;btn.textContent='Đang tạo...';api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){let html='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px">';const d=(Array.isArray(r.data)?r.data[0]:r.data);const exp=d.expires_at?new Date(d.expires_at).toLocaleDateString('vi-VN'):'Kích hoạt lần đầu ('+d.duration_days+' ngày)';if(r.count>1){html+='<div style="color:#cc3333;font-weight:600;margin-bottom:8px">Đã tạo '+r.count+' key (hạn: '+exp+'):</div><div style="max-height:300px;overflow-y:auto">';r.data.forEach((x,i)=>{html+='<div style="padding:6px 10px;margin:3px 0;background:#0d0d11;border-radius:4px;border:1px solid #cc333315;display:flex;align-items:center;gap:8px">'+(i+1)+'. <span class="copy-field" style="font-size:13px;margin:0;flex:1">'+x.key+'</span><button class="action-btn" onclick="copyKey(\\''+x.key+'\\')">Copy</button></div>'});html+='</div>'}else{html+='<div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key mới đã tạo:</div><span class="copy-field">'+r.data.key+'</span><div style="color:#886666;font-size:12px;margin-top:6px">Hết hạn: '+exp+'</div>'}html+='</div>';document.getElementById('createResult').innerHTML=html;refreshData()}else showToast(r.message,'error')}).catch(()=>showToast('Lỗi tạo key','error')).finally(()=>{btn.disabled=false;btn.textContent='Tạo Key'})}
 function copyKey(k){navigator.clipboard.writeText(k).then(()=>showToast('Đã copy: '+k,'success'))}
 let editKeyData=null;
-function showEditPanel(k){editKeyData=allKeys.find(x=>x.key===k);const x=editKeyData;if(!x)return showToast('Không tìm thấy key','error');document.getElementById('editPanelTitle').textContent='Chỉnh Sửa Key';document.getElementById('editKeyDisplay').textContent=x.key;document.getElementById('editKeyType').value=x.type||'basic';const st=x.status==='active'?'Active (Hoạt động)':x.status==='banned'?'Banned (Bị khóa)':'Expired (Hết hạn)';document.getElementById('editKeyStatus').textContent=st;document.getElementById('editKeyStatus').style.color=x.status==='active'?'#33cc33':x.status==='banned'?'#dd3333':'#cccc33';document.getElementById('editKeyExpiry').textContent=new Date(x.expires_at).toLocaleString('vi-VN');document.getElementById('editKeyHwid').textContent=x.hwid||'Chưa có';document.getElementById('editKeyUser').textContent=x.user||'-';document.getElementById('editKeyNote').textContent=x.note||'-';const banBtn=document.getElementById('editBanBtn');banBtn.textContent=x.status==='active'?'Khóa (Ban)':'Mở (Unban)';banBtn.style.background=x.status==='active'?'#cc3333':'#336633';document.getElementById('editOverlay').style.display='flex'}
+function showEditPanel(k){editKeyData=allKeys.find(x=>x.key===k);const x=editKeyData;if(!x)return showToast('Không tìm thấy key','error');document.getElementById('editPanelTitle').textContent='Chỉnh Sửa Key';document.getElementById('editKeyDisplay').textContent=x.key;document.getElementById('editKeyType').value=x.type||'basic';var es_=st(x);document.getElementById('editKeyStatus').textContent=es_.txt;document.getElementById('editKeyStatus').style.color=es_.cls==='status-active'?'#33cc33':es_.cls==='status-pending'?'#aa7777':'#dd3333';document.getElementById('editKeyExpiry').textContent=x.expires_at?new Date(x.expires_at).toLocaleString('vi-VN'):'Chưa kích hoạt';document.getElementById('editKeyHwid').textContent=x.hwid||'Chưa có';document.getElementById('editKeyUser').textContent=x.user||'-';document.getElementById('editKeyNote').textContent=x.note||'-';const banBtn=document.getElementById('editBanBtn');banBtn.textContent=x.status==='active'?'Khóa (Ban)':'Mở (Unban)';banBtn.style.background=x.status==='active'?'#cc3333':'#336633';document.getElementById('editOverlay').style.display='flex'}
 function closeEditPanel(){document.getElementById('editOverlay').style.display='none';editKeyData=null}
 function saveKeyType(){const x=editKeyData;if(!x)return;const t=document.getElementById('editKeyType').value;if(t===x.type)return showToast('Loại key không thay đổi','success');api('/api/keys/'+encodeURIComponent(x.key)+'/type',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:t})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){x.type=t;refreshData();closeEditPanel()}})}
 function extendCurrentKey(){const x=editKeyData;if(!x)return;const d=document.getElementById('editExtendDays').value;if(!d||isNaN(d)||parseInt(d)<1)return;api('/api/keys/'+encodeURIComponent(x.key)+'/extend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:parseInt(d)})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
