@@ -356,7 +356,7 @@ app.get('/api/online', requireAdmin, async (req, res) => {
     const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from('keys')
-      .select('key, hwid, last_seen, status, user, type')
+      .select('key, hwid, last_seen, status, user, type, expires_at')
       .gte('last_seen', cutoff)
       .order('last_seen', { ascending: false });
     if (error) throw error;
