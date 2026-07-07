@@ -89,7 +89,7 @@ app.get('/api/verify', async (req, res) => {
 
     const { data: keys, error } = await supabase
       .from('keys')
-      .select('key, status, expires_at, hwid, type, duration_days')
+      .select('key, status, expires_at, hwid, type, duration_days, max_devices')
       .eq('key', key);
 
     if (error) throw error;
@@ -118,22 +118,34 @@ app.get('/api/verify', async (req, res) => {
       }
     }
 
-    // Check HWID
-    if (record.hwid && record.hwid !== '' && record.hwid !== hwid) {
-      return res.json({ success: false, status: 'hwid_mismatch', message: 'Key đã được sử dụng trên thiết bị khác' });
+    // Parse HWID list (JSON array)
+    let hwidList = [];
+    if (record.hwid && record.hwid !== '') {
+      if (record.hwid.startsWith('[')) {
+        try { hwidList = JSON.parse(record.hwid); } catch { hwidList = []; }
+      } else {
+        hwidList = [record.hwid]; // backward compat
+      }
     }
 
-    // Bind HWID on first use (kích hoạt lần đầu → bắt đầu đếm ngược)
-    if (!record.hwid || record.hwid === '') {
-      const updateData = { hwid };
+    const maxDev = record.max_devices || 1;
+
+    // Check if this HWID is already registered
+    if (hwidList.includes(hwid)) {
+      // Already registered, allow
+    } else if (hwidList.length < maxDev) {
+      // Register new HWID
+      hwidList.push(hwid);
+      const updateData = { hwid: JSON.stringify(hwidList) };
       if (!record.expires_at && record.duration_days) {
         const firstExpiry = new Date(now.getTime() + record.duration_days * 24 * 60 * 60 * 1000);
         updateData.expires_at = firstExpiry.toISOString();
       }
       await supabase.from('keys').update(updateData).eq('key', key);
-      // Re-fetch để trả về expires_at mới
       const { data: updated } = await supabase.from('keys').select('expires_at').eq('key', key);
       if (updated && updated.length > 0) record.expires_at = updated[0].expires_at;
+    } else {
+      return res.json({ success: false, status: 'max_devices', message: `Key đã đạt giới hạn ${maxDev} thiết bị` });
     }
 
     // Update last_seen
@@ -162,7 +174,7 @@ app.get('/api/verify', async (req, res) => {
 // ---- Create Key(s) (ADMIN) ----
 app.post('/api/keys', requireAdmin, async (req, res) => {
   try {
-    const { days = 30, note = '', user = '', prefix: rawPrefix = '', count = 1, suffixLength: rawSuffixLen, type: rawType = 'basic' } = req.body;
+    const { days = 30, note = '', user = '', prefix: rawPrefix = '', count = 1, suffixLength: rawSuffixLen, type: rawType = 'basic', max_devices = 1 } = req.body;
     const keyType = ['basic', 'pro', 'vip'].includes(rawType) ? rawType : 'basic';
     const num = Math.min(Math.max(parseInt(count) || 1, 1), 500);
     const now = new Date();
@@ -177,13 +189,15 @@ app.post('/api/keys', requireAdmin, async (req, res) => {
       keys.push({ key: newKey, duration_days: durationDays, type: keyType });
     }
 
+    const maxDevices = Math.min(Math.max(parseInt(max_devices) || 1, 1), 100);
     const inserts = keys.map(k => ({
       key: k.key,
       status: 'active',
       created_at: now.toISOString(),
       expires_at: null,
       duration_days: durationDays,
-      hwid: '',
+      hwid: '[]',
+      max_devices: maxDevices,
       user: user || '',
       note: note || '',
       type: keyType,
@@ -284,8 +298,8 @@ app.post('/api/keys/:key/reset-hwid', requireAdmin, async (req, res) => {
     const { data: keys } = await supabase.from('keys').select('key,hwid').eq('key', req.params.key);
     if (!keys || keys.length === 0) return res.status(404).json({ success: false, message: 'Key không tồn tại' });
 
-    const oldHwid = keys[0].hwid || 'trống';
-    await supabase.from('keys').update({ hwid: '', last_seen: null }).eq('key', req.params.key);
+    const oldHwid = keys[0].hwid || '[]';
+    await supabase.from('keys').update({ hwid: '[]', last_seen: null }).eq('key', req.params.key);
     await supabase.from('activity_log').insert({ action: 'reset_hwid', key: req.params.key, detail: `Reset HWID (cũ: ${oldHwid})` });
 
     res.json({ success: true, message: 'Đã reset HWID, key có thể dùng trên máy mới' });
@@ -329,6 +343,23 @@ app.post('/api/keys/:key/type', requireAdmin, async (req, res) => {
     if (!data || data.length === 0) return res.status(404).json({ success: false, message: 'Key không tồn tại' });
     await supabase.from('activity_log').insert({ action: 'CHANGE_TYPE', key: req.params.key, detail: 'Chuyển loại thành ' + type });
     res.json({ success: true, message: 'Đã đổi loại key thành ' + type });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ---- Update Max Devices (ADMIN) ----
+app.post('/api/keys/:key/max-devices', requireAdmin, async (req, res) => {
+  try {
+    const maxDevices = parseInt(req.body.max_devices);
+    if (!maxDevices || maxDevices < 1 || maxDevices > 100) {
+      return res.json({ success: false, message: 'Số thiết bị không hợp lệ (1-100)' });
+    }
+    const { data, error } = await supabase.from('keys').update({ max_devices: maxDevices }).eq('key', req.params.key).select();
+    if (error) throw error;
+    if (!data || data.length === 0) return res.status(404).json({ success: false, message: 'Key không tồn tại' });
+    await supabase.from('activity_log').insert({ action: 'change_max_devices', key: req.params.key, detail: `Thay đổi số thiết bị tối đa thành ${maxDevices}` });
+    res.json({ success: true, message: `Đã đổi số thiết bị tối đa thành ${maxDevices}` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -442,7 +473,7 @@ tr:hover td{background:#18181e}
 .hint{color:#886666;font-size:11px;margin-top:4px}
 @media(max-width:768px){
 .container{padding:0 10px;margin:10px auto}.stats{grid-template-columns:repeat(2,1fr);gap:8px}.stat-card{padding:12px}.stat-card .num{font-size:22px}.tabs{overflow-x:auto;white-space:nowrap;gap:2px}.tab{padding:10px 12px;font-size:12px;display:inline-block}.card{padding:14px}.card h3{font-size:13px}.form-row{gap:6px}.form-row input,.form-row select{min-width:80px;font-size:12px;padding:8px 10px}table{font-size:11px}th,td{padding:6px 4px;font-size:10px;white-space:nowrap}.action-btn{padding:3px 6px;font-size:10px}.login-box{width:90%;max-width:360px;padding:24px}.login-box h2{font-size:18px}.login-box input{padding:10px}.copy-field{font-size:12px}.toast{font-size:12px;padding:10px 16px;right:10px;bottom:10px;max-width:90%}
-#tabCreate div[style*="grid-template-columns"]{grid-template-columns:1fr 1fr!important}#tabCreate div[style*="grid-template-columns"]>div:nth-child(1){grid-column:1/-1}
+#tabCreate div[style*="grid-template-columns"]{grid-template-columns:1fr 1fr!important}#tabCreate div[style*="grid-template-columns"]>div:nth-child(1){grid-column:1/-1}#tabCreate div[style*="grid-template-columns"]>div:nth-child(4){grid-column:1}
 }
 .edit-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(5,5,10,0.9);display:none;align-items:center;justify-content:center;z-index:999}
 .edit-panel{background:#121216;border:1px solid #cc333355;border-radius:10px;padding:24px;max-width:460px;width:92%;max-height:90vh;overflow-y:auto}
@@ -487,7 +518,7 @@ tr:hover td{background:#18181e}
 <button class="btn-primary btn-sm" onclick="refreshData()">Làm Mới</button>
 </div>
 <div style="overflow-x:auto">
-<table><thead><tr><th>STT</th><th>MÃ KEY</th><th>LOẠI</th><th>TRẠNG THÁI</th><th>NGÀY TẠO</th><th>HẾT HẠN</th><th>HWID</th><th>NGƯỜI DÙNG</th><th>GHI CHÚ</th><th>HÀNH ĐỘNG</th></tr></thead>
+<table><thead><tr><th>STT</th><th>MÃ KEY</th><th>LOẠI</th><th>TRẠNG THÁI</th><th>NGÀY TẠO</th><th>HẾT HẠN</th><th>THIẾT BỊ</th><th>NGƯỜI DÙNG</th><th>GHI CHÚ</th><th>HÀNH ĐỘNG</th></tr></thead>
 <tbody id="keyTableBody"><tr><td colspan="10" class="loading">Đang tải dữ liệu...</td></tr></tbody></table>
 </div>
 </div>
@@ -495,7 +526,7 @@ tr:hover td{background:#18181e}
 <div class="tab-content" id="tabCreate">
 <div class="card">
 <h3>Tạo Key Mới</h3>
-<div style="display:grid;grid-template-columns:1fr 120px 80px 1fr 1fr;gap:10px;margin-bottom:10px;align-items:start">
+<div style="display:grid;grid-template-columns:1fr 120px 80px 80px 1fr 1fr;gap:10px;margin-bottom:10px;align-items:start">
 <div style="display:flex;flex-direction:column;gap:4px">
 <label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">TIỀN TỐ + ĐỘ DÀI</label>
 <div style="display:flex;align-items:center;gap:4px">
@@ -517,6 +548,10 @@ tr:hover td{background:#18181e}
 <div style="display:flex;flex-direction:column;gap:4px">
 <label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">SỐ LƯỢNG</label>
 <input type="number" id="createCount" value="1" min="1" max="500">
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">SỐ THIẾT BỊ</label>
+<input type="number" id="createMaxDevices" value="1" min="1" max="100">
 </div>
 <div style="display:flex;flex-direction:column;gap:4px;max-width:100px">
 <label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">LOẠI KEY</label>
@@ -552,8 +587,8 @@ tr:hover td{background:#18181e}
 </div>
 </div>
 <div style="overflow-x:auto">
-<table><thead><tr><th>STT</th><th>MÃ KEY</th><th>LOẠI</th><th>HWID</th><th>NGƯỜI DÙNG</th><th>LẦN CUỐI</th><th>TRẠNG THÁI</th></tr></thead>
-<tbody id="onlineTableBody"><tr><td colspan="7" class="loading">Đang tải...</td></tr></tbody></table>
+<table><thead><tr><th>STT</th><th>MÃ KEY</th><th>LOẠI</th><th>THIẾT BỊ</th><th>HWID</th><th>NGƯỜI DÙNG</th><th>LẦN CUỐI</th><th>TRẠNG THÁI</th></tr></thead>
+<tbody id="onlineTableBody"><tr><td colspan="8" class="loading">Đang tải...</td></tr></tbody></table>
 </div>
 </div>
 </div>
@@ -576,6 +611,8 @@ tr:hover td{background:#18181e}
 <div class="row"><label>Trạng Thái</label><span id="editKeyStatus" style="font-weight:600"></span></div>
 <div class="row"><label>Hạn Đến</label><span id="editKeyExpiry" style="color:#886666"></span></div>
 <div class="row"><label>HWID</label><span id="editKeyHwid" style="font-family:monospace;font-size:11px;color:#cc6666"></span></div>
+<div class="row"><label>Thiết Bị</label><span id="editKeyDevices" style="color:#886666"></span></div>
+<div class="row"><label>Số TB Tối Đa</label><input type="number" id="editMaxDevices" value="1" min="1" max="100" style="max-width:80px"><button class="btn-primary btn-sm" onclick="saveMaxDevices()">Lưu</button></div>
 <div class="row"><label>Người Dùng</label><span id="editKeyUser" style="color:#886666"></span></div>
 <div class="row"><label>Ghi Chú</label><span id="editKeyNote" style="color:#886666"></span></div>
 <div class="row" id="editExtendRow"><label>Gia Hạn (ngày)</label><input type="number" id="editExtendDays" value="30" min="1" max="3650" style="max-width:100px"><button class="btn-primary btn-sm" onclick="extendCurrentKey()">Gia Hạn</button></div>
@@ -595,17 +632,19 @@ function login(){const u=document.getElementById('loginUser').value,p=document.g
 function checkHealth(){fetch(BASE+'/api/health').then(r=>r.json()).then(d=>{showToast('Server OK | Admin: '+d.admin+' | Supabase: '+d.supabase+(d.keys_count!==undefined?' | Keys: '+d.keys_count:''),'success')}).catch(e=>{showToast('Server không phản hồi: '+e.message,'error');console.error('Health:',e)})}
 function showToast(m,t){const e=document.getElementById('toast');e.textContent=m;e.className='toast toast-'+t;e.style.display='block';setTimeout(()=>e.style.display='none',3500)}
 function api(p,o){o=o||{};o.headers=o.headers||{};o.headers['Authorization']='Basic '+authToken;return fetch(BASE+p,o).then(r=>r.json())}
-function st(x){if(x.status==="banned")return{cls:"status-banned",txt:"Bị khóa"};if(x.status==="expired")return{cls:"status-expired",txt:"Hết hạn"};if(!x.expires_at)return{cls:"status-pending",txt:"Chưa kích hoạt"};var e=new Date(x.expires_at);if(e<=new Date())return{cls:"status-expired",txt:"Hết hạn"};return{cls:"status-active",txt:"Hoạt động"}}let onlineTimer;function switchTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));const cap=t.charAt(0).toUpperCase()+t.slice(1);document.getElementById('tab'+cap+'Btn').classList.add('active');document.getElementById('tab'+cap).classList.add('active');if(onlineTimer)clearInterval(onlineTimer);if(t==='online'){refreshOnline();onlineTimer=setInterval(refreshOnline,5000)}}
+function st(x){if(x.status==="banned")return{cls:"status-banned",txt:"Bị khóa"};if(x.status==="expired")return{cls:"status-expired",txt:"Hết hạn"};if(!x.expires_at)return{cls:"status-pending",txt:"Chưa kích hoạt"};var e=new Date(x.expires_at);if(e<=new Date())return{cls:"status-expired",txt:"Hết hạn"};return{cls:"status-active",txt:"Hoạt động"}}
+function getDevInfo(hwid){if(!hwid||hwid===''||hwid==='[]')return{count:0,list:[]};try{if(hwid.startsWith('[')){var arr=JSON.parse(hwid);return{count:arr.length,list:arr}}return{count:1,list:[hwid]}}catch(e){return{count:0,list:[]}}}
+let onlineTimer;function switchTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));const cap=t.charAt(0).toUpperCase()+t.slice(1);document.getElementById('tab'+cap+'Btn').classList.add('active');document.getElementById('tab'+cap).classList.add('active');if(onlineTimer)clearInterval(onlineTimer);if(t==='online'){refreshOnline();onlineTimer=setInterval(refreshOnline,5000)}}
 function refreshData(){Promise.all([api('/api/keys').then(r=>allKeys=r.data||[]),api('/api/logs').then(r=>allLogs=r.data||[]),api('/api/stats').then(r=>{if(r.data)renderStats(r.data)})]).then(()=>{renderTable();renderLogs()}).catch(e=>{console.error('refreshData:',e);showToast('Lỗi tải dữ liệu','error')})}
 function refreshOnline(){api('/api/online').then(r=>{renderOnline(r.data||[]);const e=document.getElementById('onlineCount');if(e)e.textContent=r.count+' key online'}).catch(()=>{})}
-function renderOnline(d){const t=document.getElementById('onlineTableBody');if(!t)return;if(!d.length){t.innerHTML='<tr><td colspan="7" style="text-align:center;color:#886666">Không có key online</td></tr>';return}t.innerHTML=d.map((x,i)=>{var st_=st(x);var stxt='<span style="color:'+(st_.cls==='status-active'?'#33cc33':st_.cls==='status-pending'?'#aa7777':'#dd3333')+'">'+st_.txt+'</span>';const ls=x.last_seen?new Date(x.last_seen).toLocaleTimeString('vi-VN'):'-';const tp=x.type||'basic';return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+ls+'</td><td>'+stxt+'</td></tr>'}).join('')}
+function renderOnline(d){const t=document.getElementById('onlineTableBody');if(!t)return;if(!d.length){t.innerHTML='<tr><td colspan="8" style="text-align:center;color:#886666">Không có key online</td></tr>';return}t.innerHTML=d.map((x,i)=>{var st_=st(x);var stxt='<span style="color:'+(st_.cls==='status-active'?'#33cc33':st_.cls==='status-pending'?'#aa7777':'#dd3333')+'">'+st_.txt+'</span>';const ls=x.last_seen?new Date(x.last_seen).toLocaleTimeString('vi-VN'):'-';const tp=x.type||'basic';var di=getDevInfo(x.hwid);var md=x.max_devices||1;return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td style="font-size:11px">'+(di.count>0?'<span title="'+di.list.join(', ')+'" style="cursor:help">'+di.count+'/'+md+' TB</span>':'<span style="color:#666">0/'+md+' TB</span>')+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+ls+'</td><td>'+stxt+'</td></tr>'}).join('')}
 function renderStats(d){document.getElementById('statsContainer').innerHTML='<div class="stat-card"><div class="num">'+d.total+'</div><div class="label">Tổng Key</div></div><div class="stat-card"><div class="num">'+d.active+'</div><div class="label">Hoạt Động</div></div><div class="stat-card"><div class="num">'+d.banned+'</div><div class="label">Bị Khóa</div></div><div class="stat-card"><div class="num">'+d.expired+'</div><div class="label">Hết Hạn</div></div>'}
-function renderTable(){const s=document.getElementById('searchInput').value.toLowerCase(),f=document.getElementById('statusFilter').value;let k=allKeys;if(s)k=k.filter(x=>x.key.toLowerCase().includes(s));if(f!=='all')k=k.filter(function(x){var s_=st(x);return s_.cls==='status-'+f||s_.txt.toLowerCase()===f});const t=document.getElementById('keyTableBody');if(!k.length){t.innerHTML='<tr><td colspan="10" style="text-align:center;color:#886666">Không có dữ liệu</td></tr>';return}t.innerHTML=k.map((x,i)=>{var s_=st(x);var c=s_.cls,stxt=s_.txt,tp=x.type||'basic';return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td class="'+c+'">'+stxt+'</td><td>'+new Date(x.created_at).toLocaleDateString('vi-VN')+'</td><td>'+(x.expires_at?new Date(x.expires_at).toLocaleDateString('vi-VN'):'<span style=color:#666>Chưa kích hoạt</span>')+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+(x.note||'-')+'</td><td nowrap><button class="action-btn" onclick="showEditPanel(\\''+x.key.replace(/'/g,"\\'")+'\\')">Chỉnh sửa</button></td></tr>'}).join('')}
+function renderTable(){const s=document.getElementById('searchInput').value.toLowerCase(),f=document.getElementById('statusFilter').value;let k=allKeys;if(s)k=k.filter(x=>x.key.toLowerCase().includes(s));if(f!=='all')k=k.filter(function(x){var s_=st(x);return s_.cls==='status-'+f||s_.txt.toLowerCase()===f});const t=document.getElementById('keyTableBody');if(!k.length){t.innerHTML='<tr><td colspan="10" style="text-align:center;color:#886666">Không có dữ liệu</td></tr>';return}t.innerHTML=k.map((x,i)=>{var s_=st(x);var c=s_.cls,stxt=s_.txt,tp=x.type||'basic';var di=getDevInfo(x.hwid);var md=x.max_devices||1;var devDisplay=di.count>0?'<span title="'+di.list.join(', ')+'" style="cursor:help">'+di.count+'/'+md+' TB</span>':'<span style="color:#666">0/'+md+' TB</span>';return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td class="'+c+'">'+stxt+'</td><td>'+new Date(x.created_at).toLocaleDateString('vi-VN')+'</td><td>'+(x.expires_at?new Date(x.expires_at).toLocaleDateString('vi-VN'):'<span style=color:#666>Chưa kích hoạt</span>')+'</td><td style="font-size:11px">'+devDisplay+'</td><td>'+(x.user||'-')+'</td><td>'+(x.note||'-')+'</td><td nowrap><button class="action-btn" onclick="showEditPanel(\\''+x.key.replace(/'/g,"\\'")+'\\')">Chỉnh sửa</button></td></tr>'}).join('')}
 function renderLogs(){const t=document.getElementById('logTableBody');if(!allLogs.length){t.innerHTML='<tr><td colspan="5" style="text-align:center;color:#886666">Không có dữ liệu</td></tr>';return}t.innerHTML=allLogs.slice(0,50).map(x=>'<tr><td>'+x.id+'</td><td style="color:#cc3333;font-weight:600">'+x.action+'</td><td class="copy-field">'+x.key+'</td><td>'+x.detail+'</td><td>'+new Date(x.created_at).toLocaleString('vi-VN')+'</td></tr>').join('')}
-function createKey(){const p=document.getElementById('createPrefix').value.trim(),d=document.getElementById('createDays').value,c=document.getElementById('createCount').value,g=parseInt(document.getElementById('suffixGroups').value),u=document.getElementById('createUser').value.trim(),n=document.getElementById('createNote').value.trim(),t=document.getElementById('createType').value,btn=document.getElementById('createBtn');const body={days:parseInt(d),count:parseInt(c),type:t};if(p){body.prefix=p;body.suffixLength=g}if(u)body.user=u;if(n)body.note=n;btn.disabled=true;btn.textContent='Đang tạo...';api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){let html='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px">';const d=(Array.isArray(r.data)?r.data[0]:r.data);const exp=d.expires_at?new Date(d.expires_at).toLocaleDateString('vi-VN'):'Kích hoạt lần đầu ('+d.duration_days+' ngày)';if(r.count>1){html+='<div style="color:#cc3333;font-weight:600;margin-bottom:8px">Đã tạo '+r.count+' key (hạn: '+exp+'):</div><div style="max-height:300px;overflow-y:auto">';r.data.forEach((x,i)=>{html+='<div style="padding:6px 10px;margin:3px 0;background:#0d0d11;border-radius:4px;border:1px solid #cc333315;display:flex;align-items:center;gap:8px">'+(i+1)+'. <span class="copy-field" style="font-size:13px;margin:0;flex:1">'+x.key+'</span><button class="action-btn" onclick="copyKey(\\''+x.key+'\\')">Copy</button></div>'});html+='</div>'}else{html+='<div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key mới đã tạo:</div><span class="copy-field">'+r.data.key+'</span><div style="color:#886666;font-size:12px;margin-top:6px">Hết hạn: '+exp+'</div>'}html+='</div>';document.getElementById('createResult').innerHTML=html;refreshData()}else showToast(r.message,'error')}).catch(()=>showToast('Lỗi tạo key','error')).finally(()=>{btn.disabled=false;btn.textContent='Tạo Key'})}
+function createKey(){const p=document.getElementById('createPrefix').value.trim(),d=document.getElementById('createDays').value,c=document.getElementById('createCount').value,g=parseInt(document.getElementById('suffixGroups').value),u=document.getElementById('createUser').value.trim(),n=document.getElementById('createNote').value.trim(),t=document.getElementById('createType').value,md=document.getElementById('createMaxDevices').value,btn=document.getElementById('createBtn');const body={days:parseInt(d),count:parseInt(c),type:t,max_devices:parseInt(md)||1};if(p){body.prefix=p;body.suffixLength=g}if(u)body.user=u;if(n)body.note=n;btn.disabled=true;btn.textContent='Đang tạo...';api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){let html='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px">';const d=(Array.isArray(r.data)?r.data[0]:r.data);const exp=d.expires_at?new Date(d.expires_at).toLocaleDateString('vi-VN'):'Kích hoạt lần đầu ('+d.duration_days+' ngày)';if(r.count>1){html+='<div style="color:#cc3333;font-weight:600;margin-bottom:8px">Đã tạo '+r.count+' key (hạn: '+exp+'):</div><div style="max-height:300px;overflow-y:auto">';r.data.forEach((x,i)=>{html+='<div style="padding:6px 10px;margin:3px 0;background:#0d0d11;border-radius:4px;border:1px solid #cc333315;display:flex;align-items:center;gap:8px">'+(i+1)+'. <span class="copy-field" style="font-size:13px;margin:0;flex:1">'+x.key+'</span><button class="action-btn" onclick="copyKey(\\''+x.key+'\\')">Copy</button></div>'});html+='</div>'}else{html+='<div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key mới đã tạo:</div><span class="copy-field">'+r.data.key+'</span><div style="color:#886666;font-size:12px;margin-top:6px">Hết hạn: '+exp+'</div>'}html+='</div>';document.getElementById('createResult').innerHTML=html;refreshData()}else showToast(r.message,'error')}).catch(()=>showToast('Lỗi tạo key','error')).finally(()=>{btn.disabled=false;btn.textContent='Tạo Key'})}
 function copyKey(k){navigator.clipboard.writeText(k).then(()=>showToast('Đã copy: '+k,'success'))}
 let editKeyData=null;
-function showEditPanel(k){editKeyData=allKeys.find(x=>x.key===k);const x=editKeyData;if(!x)return showToast('Không tìm thấy key','error');document.getElementById('editPanelTitle').textContent='Chỉnh Sửa Key';document.getElementById('editKeyDisplay').textContent=x.key;document.getElementById('editKeyType').value=x.type||'basic';var es_=st(x);document.getElementById('editKeyStatus').textContent=es_.txt;document.getElementById('editKeyStatus').style.color=es_.cls==='status-active'?'#33cc33':es_.cls==='status-pending'?'#aa7777':'#dd3333';document.getElementById('editKeyExpiry').textContent=x.expires_at?new Date(x.expires_at).toLocaleString('vi-VN'):'Chưa kích hoạt';document.getElementById('editKeyHwid').textContent=x.hwid||'Chưa có';document.getElementById('editKeyUser').textContent=x.user||'-';document.getElementById('editKeyNote').textContent=x.note||'-';const banBtn=document.getElementById('editBanBtn');banBtn.textContent=x.status==='active'?'Khóa (Ban)':'Mở (Unban)';banBtn.style.background=x.status==='active'?'#cc3333':'#336633';document.getElementById('editOverlay').style.display='flex'}
+function showEditPanel(k){editKeyData=allKeys.find(x=>x.key===k);const x=editKeyData;if(!x)return showToast('Không tìm thấy key','error');document.getElementById('editPanelTitle').textContent='Chỉnh Sửa Key';document.getElementById('editKeyDisplay').textContent=x.key;document.getElementById('editKeyType').value=x.type||'basic';var es_=st(x);document.getElementById('editKeyStatus').textContent=es_.txt;document.getElementById('editKeyStatus').style.color=es_.cls==='status-active'?'#33cc33':es_.cls==='status-pending'?'#aa7777':'#dd3333';document.getElementById('editKeyExpiry').textContent=x.expires_at?new Date(x.expires_at).toLocaleString('vi-VN'):'Chưa kích hoạt';var di=getDevInfo(x.hwid);var md=x.max_devices||1;document.getElementById('editKeyHwid').textContent=di.count>0?di.list.join(', '):'Chưa có';document.getElementById('editKeyDevices').textContent=di.count+'/'+md+' thiết bị';document.getElementById('editMaxDevices').value=md;document.getElementById('editKeyUser').textContent=x.user||'-';document.getElementById('editKeyNote').textContent=x.note||'-';const banBtn=document.getElementById('editBanBtn');banBtn.textContent=x.status==='active'?'Khóa (Ban)':'Mở (Unban)';banBtn.style.background=x.status==='active'?'#cc3333':'#336633';document.getElementById('editOverlay').style.display='flex'}
 function closeEditPanel(){document.getElementById('editOverlay').style.display='none';editKeyData=null}
 function saveKeyType(){const x=editKeyData;if(!x)return;const t=document.getElementById('editKeyType').value;if(t===x.type)return showToast('Loại key không thay đổi','success');api('/api/keys/'+encodeURIComponent(x.key)+'/type',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:t})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){x.type=t;refreshData();closeEditPanel()}})}
 function extendCurrentKey(){const x=editKeyData;if(!x)return;const d=document.getElementById('editExtendDays').value;if(!d||isNaN(d)||parseInt(d)<1)return;api('/api/keys/'+encodeURIComponent(x.key)+'/extend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:parseInt(d)})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
@@ -613,6 +652,7 @@ function toggleBanKey(){const x=editKeyData;if(!x)return;const isBan=x.status===
 function resetHwidCurrent(){const x=editKeyData;if(!x)return;if(!confirm('Reset HWID cho key '+x.key+'?'))return;api('/api/keys/'+encodeURIComponent(x.key)+'/reset-hwid',{method:'POST'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
 function deleteCurrentKey(){const x=editKeyData;if(!x)return;if(!confirm('Xóa key '+x.key+'?'))return;api('/api/keys/'+encodeURIComponent(x.key),{method:'DELETE'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
 function copyCurrentKey(){const x=editKeyData;if(!x)return;navigator.clipboard.writeText(x.key).then(()=>showToast('Đã copy: '+x.key,'success'))}
+function saveMaxDevices(){const x=editKeyData;if(!x)return;const md=parseInt(document.getElementById('editMaxDevices').value);if(!md||md<1||md>100)return showToast('Số thiết bị không hợp lệ (1-100)','error');api('/api/keys/'+encodeURIComponent(x.key)+'/max-devices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({max_devices:md})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){x.max_devices=md;refreshData();closeEditPanel()}})}
 </script>
 </body>
 </html>`);
