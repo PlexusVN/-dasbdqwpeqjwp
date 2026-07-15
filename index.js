@@ -647,44 +647,44 @@ tr:hover td{background:#18181e}
 <div class="header"><h1>PLEXUS CHEAT</h1><p>Multi-Product Auth System</p></div>
 <div class="login-overlay" id="loginOverlay">
 <div class="login-box">
-<h2>DANG NHAP</h2>
-<input type="text" id="loginUser" placeholder="Ten dang nhap">
-<input type="password" id="loginPass" placeholder="Mat khau">
-<button class="btn-primary" onclick="login()">DANG NHAP</button>
-<button onclick="checkHealth()" style="margin-top:8px;width:100%;background:transparent;border:1px solid #cc333344;font-size:12px;padding:8px">Kiem tra ket noi</button>
+<h2>ĐĂNG NHẬP</h2>
+<input type="text" id="loginUser" placeholder="Tên đăng nhập">
+<input type="password" id="loginPass" placeholder="Mật khẩu">
+<button class="btn-primary" onclick="login()">ĐĂNG NHẬP</button>
+<button onclick="checkHealth()" style="margin-top:8px;width:100%;background:transparent;border:1px solid #cc333344;font-size:12px;padding:8px">Kiểm tra kết nối</button>
 </div>
 </div>
 <div class="container" id="mainContent" style="display:none">
 <div class="stats" id="statsContainer"></div>
 <div class="tabs">
-<div class="tab active" onclick="switchTab('keys')" id="tabKeysBtn">Danh Sach Key</div>
-<div class="tab" onclick="switchTab('create')" id="tabCreateBtn">Tao Key</div>
-<div class="tab" onclick="switchTab('online')" id="tabOnlineBtn">Trang Thai Online</div>
-<div class="tab" onclick="switchTab('logs')" id="tabLogsBtn">Nhat Ky</div>
-<div class="tab" onclick="switchTab('products')" id="tabProductsBtn">Quan Ly Product</div>
+<div class="tab active" onclick="switchTab('keys')" id="tabKeysBtn">Danh Sách Key</div>
+<div class="tab" onclick="switchTab('create')" id="tabCreateBtn">Tạo Key</div>
+<div class="tab" onclick="switchTab('online')" id="tabOnlineBtn">Trạng Thái Online</div>
+<div class="tab" onclick="switchTab('logs')" id="tabLogsBtn">Nhật Ký</div>
+<div class="tab" onclick="switchTab('products')" id="tabProductsBtn">Quản Lý Product</div>
 </div>
 <div class="tab-content active" id="tabKeys">
 <div class="card">
 <div class="form-row">
-<input type="text" id="searchInput" placeholder="Tim key..." oninput="renderTable()">
+<input type="text" id="searchInput" placeholder="Tìm key..." oninput="renderTable()">
 <select id="productFilter" onchange="renderTable()"></select>
 <select id="statusFilter" onchange="renderTable()">
-<option value="all">Tat ca</option><option value="pending">Chua kich hoat</option><option value="active">Hoat dong</option><option value="banned">Bi khoa</option><option value="expired">Het han</option>
+<option value="all">Tất cả</option><option value="pending">Chưa kích hoạt</option><option value="active">Hoạt động</option><option value="banned">Bị khóa</option><option value="expired">Hết hạn</option>
 </select>
-<button class="btn-primary btn-sm" onclick="refreshData()">Lam Moi</button>
+<button class="btn-primary btn-sm" onclick="refreshData()">Làm Mới</button>
 </div>
 <div style="overflow-x:auto">
-<table><thead><tr><th>STT</th><th>MA KEY</th><th>PRODUCT</th><th>LOAI</th><th>TRANG THAI</th><th>NGAY TAO</th><th>HET HAN</th><th>THIET BI</th><th>HWID</th><th>NGUOI DUNG</th><th>GHI CHU</th><th>HANH DONG</th></tr></thead>
-<tbody id="keyTableBody"><tr><td colspan="12" class="loading">Dang tai du lieu...</td></tr></tbody></table>
+<table><thead><tr><th>STT</th><th>MÃ KEY</th><th>PRODUCT</th><th>LOẠI</th><th>TRẠNG THÁI</th><th>NGÀY TẠO</th><th>HẾT HẠN</th><th>THIẾT BỊ</th><th>HWID</th><th>NGƯỜI DÙNG</th><th>GHI CHÚ</th><th>HÀNH ĐỘNG</th></tr></thead>
+<tbody id="keyTableBody"><tr><td colspan="12" class="loading">Đang tải dữ liệu...</td></tr></tbody></table>
 </div>
 </div>
 </div>
 <div class="tab-content" id="tabCreate">
 <div class="card">
-<h3>Tao Key Moi</h3>
+<h3>Tạo Key Mới</h3>
 <div style="display:flex;gap:16px;margin-bottom:14px;padding:10px 14px;background:#0e0e12;border-radius:6px;border:1px solid #cc333322">
-<label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="keyMode" value="auto" checked onchange="toggleKeyMode()"> Tu dong (tien to + random)</label>
-<label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="keyMode" value="manual" onchange="toggleKeyMode()"> Nhap tay</label>
+<label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="keyMode" value="auto" checked onchange="toggleKeyMode()"> Tự động (tiền tố + random)</label>
+<label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="keyMode" value="manual" onchange="toggleKeyMode()"> Nhập tay</label>
 </div>
 <div id="autoKeyFields" style="display:grid;grid-template-columns:1fr 120px 80px 80px 1fr 1fr;gap:10px;margin-bottom:10px;align-items:start">
 <div style="display:flex;flex-direction:column;gap:4px">
@@ -706,19 +706,19 @@ tr:hover td{background:#18181e}
 </div>
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NGAY HET HAN</label>
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NGÀY HẾT HẠN</label>
 <input type="number" id="createDays" value="30" min="1" max="3650">
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">SO LUONG</label>
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">SỐ LƯỢNG</label>
 <input type="number" id="createCount" value="1" min="1" max="500">
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">SO THIET BI</label>
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">SỐ THIẾT BỊ</label>
 <input type="number" id="createMaxDevices" value="1" min="1" max="100">
 </div>
 <div style="display:flex;flex-direction:column;gap:4px;max-width:100px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">LOAI KEY</label>
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">LOẠI KEY</label>
 <select id="createType" style="padding:9px 8px">
 <option value="basic">Basic</option>
 <option value="pro">Pro</option>
@@ -726,12 +726,12 @@ tr:hover td{background:#18181e}
 </select>
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NGUOI DUNG</label>
-<input type="text" id="createUser" placeholder="Khong bat buoc">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NGƯỜI DÙNG</label>
+<input type="text" id="createUser" placeholder="Không bắt buộc">
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">GHI CHU</label>
-<input type="text" id="createNote" placeholder="Khong bat buoc">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">GHI CHÚ</label>
+<input type="text" id="createNote" placeholder="Không bắt buộc">
 </div>
 </div>
 <div id="manualKeyFields" style="display:none;margin-bottom:10px">
@@ -741,9 +741,9 @@ tr:hover td{background:#18181e}
 <select id="createProductIdManual" style="padding:9px 8px"></select>
 </div>
 <div style="display:flex;flex-direction:column;gap:4px;grid-column:span 2">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NHAP KEY</label>
-<input type="text" id="createManualKey" placeholder="Nhap ma key..." style="width:100%;font-family:monospace;padding:9px 8px">
-<div style="font-size:11px;color:#886666;margin-top:2px">Tuy chon: <input type="number" id="createManualDays" value="30" min="1" max="3650" style="width:70px;padding:4px 6px;font-size:11px"> ngay | <input type="number" id="createManualMaxDevices" value="1" min="1" max="100" style="width:60px;padding:4px 6px;font-size:11px"> thiet bi</div>
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NHẬP KEY</label>
+<input type="text" id="createManualKey" placeholder="Nhập mã key..." style="width:100%;font-family:monospace;padding:9px 8px">
+<div style="font-size:11px;color:#886666;margin-top:2px">Tùy chọn: <input type="number" id="createManualDays" value="30" min="1" max="3650" style="width:70px;padding:4px 6px;font-size:11px"> ngày | <input type="number" id="createManualMaxDevices" value="1" min="1" max="100" style="width:60px;padding:4px 6px;font-size:11px"> thiết bị</div>
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
 <label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">LOAI KEY</label>
@@ -754,14 +754,14 @@ tr:hover td{background:#18181e}
 </select>
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NGUOI DUNG</label>
-<input type="text" id="createManualUser" placeholder="Khong bat buoc" style="width:100%">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NGƯỜI DÙNG</label>
+<input type="text" id="createManualUser" placeholder="Không bắt buộc" style="width:100%">
 </div>
 </div>
 </div>
 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-<button class="btn-success" onclick="createKey()" id="createBtn">Tao Key</button>
-<small id="createModeHint" style="color:#886666">De trong tien de tao key random dai (32 ky tu).</small>
+<button class="btn-success" onclick="createKey()" id="createBtn">Tạo Key</button>
+<small id="createModeHint" style="color:#886666">Để trống tiền tố để tạo key random dài (32 ký tự).</small>
 </div>
 <div id="createResult"></div>
 </div>
@@ -769,41 +769,41 @@ tr:hover td{background:#18181e}
 <div class="tab-content" id="tabOnline">
 <div class="card">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-<h3 style="margin:0">Trang Thai Online</h3>
+<h3 style="margin:0">Trạng Thái Online</h3>
 <div style="display:flex;align-items:center;gap:8px">
 <small id="onlineCount" style="color:#33cc33;font-weight:600">0 key online</small>
-<button class="btn-primary btn-sm" onclick="refreshOnline()">Lam Moi</button>
+<button class="btn-primary btn-sm" onclick="refreshOnline()">Làm Mới</button>
 </div>
 </div>
 <div style="overflow-x:auto">
-<table><thead><tr><th>STT</th><th>MA KEY</th><th>PRODUCT</th><th>LOAI</th><th>THIET BI</th><th>HWID</th><th>NGUOI DUNG</th><th>LAN CUOI</th><th>TRANG THAI</th></tr></thead>
-<tbody id="onlineTableBody"><tr><td colspan="9" class="loading">Dang tai...</td></tr></tbody></table>
+<table><thead><tr><th>STT</th><th>MÃ KEY</th><th>PRODUCT</th><th>LOẠI</th><th>THIẾT BỊ</th><th>HWID</th><th>NGƯỜI DÙNG</th><th>LẦN CUỐI</th><th>TRẠNG THÁI</th></tr></thead>
+<tbody id="onlineTableBody"><tr><td colspan="9" class="loading">Đang tải...</td></tr></tbody></table>
 </div>
 </div>
 </div>
 <div class="tab-content" id="tabLogs">
 <div class="card">
-<h3>Nhat Ky Hoat Dong</h3>
+<h3>Nhật Ký Hoạt Động</h3>
 <div style="overflow-x:auto">
-<table><thead><tr><th>ID</th><th>HANH DONG</th><th>KEY</th><th>CHI TIET</th><th>THOI GIAN</th></tr></thead>
-<tbody id="logTableBody"><tr><td colspan="5" class="loading">Dang tai...</td></tr></tbody></table>
+<table><thead><tr><th>ID</th><th>HÀNH ĐỘNG</th><th>KEY</th><th>CHI TIẾT</th><th>THỜI GIAN</th></tr></thead>
+<tbody id="logTableBody"><tr><td colspan="5" class="loading">Đang tải...</td></tr></tbody></table>
 </div>
 </div>
 </div>
 <div class="tab-content" id="tabProducts">
 <div class="card">
 <div class="form-row" style="justify-content:space-between;flex-wrap:wrap">
-<h3 style="margin:0">Danh Sach Product</h3>
+<h3 style="margin:0">Danh Sách Product</h3>
 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-<input type="text" id="newProductName" placeholder="Ten product" style="min-width:120px">
+<input type="text" id="newProductName" placeholder="Tên product" style="min-width:120px">
 <input type="text" id="newProductSecret" placeholder="Secret key" style="min-width:160px;font-family:monospace">
-<input type="password" id="newProductPassword" placeholder="Mat khau product" style="min-width:140px">
-<button class="btn-success btn-sm" onclick="createProduct()">Them Product</button>
+<input type="password" id="newProductPassword" placeholder="Mật khẩu product" style="min-width:140px">
+<button class="btn-success btn-sm" onclick="createProduct()">Thêm Product</button>
 </div>
 </div>
 <div style="overflow-x:auto">
-<table><thead><tr><th>ID</th><th>NAME</th><th>SECRET</th><th>MAT KHAU</th><th>CREATED</th><th>ACTION</th></tr></thead>
-<tbody id="productTableBody"><tr><td colspan="6" class="loading">Dang tai...</td></tr></tbody></table>
+<table><thead><tr><th>ID</th><th>NAME</th><th>SECRET</th><th>MẬT KHẨU</th><th>CREATED</th><th>ACTION</th></tr></thead>
+<tbody id="productTableBody"><tr><td colspan="6" class="loading">Đang tải...</td></tr></tbody></table>
 </div>
 </div>
 </div>
@@ -811,22 +811,22 @@ tr:hover td{background:#18181e}
 <div class="edit-overlay" id="editOverlay" onclick="if(event.target===this)closeEditPanel()">
 <div class="edit-panel" id="editPanel">
 <span class="close-btn" onclick="closeEditPanel()">&times;</span>
-<h3 id="editPanelTitle">Chinh Sua Key</h3>
+<h3 id="editPanelTitle">Chỉnh Sửa Key</h3>
 <div class="key-display" id="editKeyDisplay">-</div>
-<div class="row"><label>Loai Key</label><select id="editKeyType"><option value="basic">Basic</option><option value="pro">Pro</option><option value="vip">VIP</option></select><button class="btn-primary btn-sm" onclick="saveKeyType()">Luu</button></div>
-<div class="row"><label>Trang Thai</label><span id="editKeyStatus" style="font-weight:600"></span></div>
+<div class="row"><label>Loại Key</label><select id="editKeyType"><option value="basic">Basic</option><option value="pro">Pro</option><option value="vip">VIP</option></select><button class="btn-primary btn-sm" onclick="saveKeyType()">Lưu</button></div>
+<div class="row"><label>Trạng Thái</label><span id="editKeyStatus" style="font-weight:600"></span></div>
 <div class="row"><label>Product</label><span id="editKeyProduct" style="color:#886666"></span></div>
-<div class="row"><label>Han Den</label><span id="editKeyExpiry" style="color:#886666"></span></div>
+<div class="row"><label>Hạn Đến</label><span id="editKeyExpiry" style="color:#886666"></span></div>
 <div class="row"><label>HWID</label><span id="editKeyHwid" style="font-family:monospace;font-size:11px;color:#cc6666"></span></div>
-<div class="row"><label>Thiet Bi</label><span id="editKeyDevices" style="color:#886666"></span></div>
-<div class="row"><label>So TB Toi Da</label><input type="number" id="editMaxDevices" value="1" min="1" max="100" style="max-width:80px"><button class="btn-primary btn-sm" onclick="saveMaxDevices()">Luu</button></div>
-<div class="row"><label>Nguoi Dung</label><span id="editKeyUser" style="color:#886666"></span></div>
-<div class="row"><label>Ghi Chu</label><span id="editKeyNote" style="color:#886666"></span></div>
-<div class="row" id="editExtendRow"><label>Gia Han (ngay)</label><input type="number" id="editExtendDays" value="30" min="1" max="3650" style="max-width:100px"><button class="btn-primary btn-sm" onclick="extendCurrentKey()">Gia Han</button></div>
+<div class="row"><label>Thiết Bị</label><span id="editKeyDevices" style="color:#886666"></span></div>
+<div class="row"><label>Số TB Tối Đa</label><input type="number" id="editMaxDevices" value="1" min="1" max="100" style="max-width:80px"><button class="btn-primary btn-sm" onclick="saveMaxDevices()">Lưu</button></div>
+<div class="row"><label>Người Dùng</label><span id="editKeyUser" style="color:#886666"></span></div>
+<div class="row"><label>Ghi Chú</label><span id="editKeyNote" style="color:#886666"></span></div>
+<div class="row" id="editExtendRow"><label>Gia Hạn (ngày)</label><input type="number" id="editExtendDays" value="30" min="1" max="3650" style="max-width:100px"><button class="btn-primary btn-sm" onclick="extendCurrentKey()">Gia Hạn</button></div>
 <div class="actions">
-<button class="action-btn" id="editBanBtn" onclick="toggleBanKey()">Khoa</button>
+<button class="action-btn" id="editBanBtn" onclick="toggleBanKey()">Khóa</button>
 <button class="action-btn" onclick="resetHwidCurrent()">Reset HWID</button>
-<button class="action-btn" onclick="deleteCurrentKey()">Xoa</button>
+<button class="action-btn" onclick="deleteCurrentKey()">Xóa</button>
 <button class="action-btn" onclick="copyCurrentKey()">Copy</button>
 </div>
 </div>
@@ -834,13 +834,13 @@ tr:hover td{background:#18181e}
 <div class="edit-overlay" id="deleteProductOverlay" style="display:none" onclick="if(event.target===this)closeDeleteProductModal()">
 <div class="edit-panel" style="max-width:380px">
 <span class="close-btn" onclick="closeDeleteProductModal()">&times;</span>
-<h3>Xac Nhan Xoa Product</h3>
-<p style="font-size:13px;color:#aa7777;margin-bottom:12px" id="deleteProductInfo">Nhap mat khau de xoa product</p>
-<input type="password" id="deleteProductPassword" placeholder="Mat khau product..." style="width:100%;padding:10px;margin-bottom:4px">
+<h3>Xác Nhận Xóa Product</h3>
+<p style="font-size:13px;color:#aa7777;margin-bottom:12px" id="deleteProductInfo">Nhập mật khẩu để xóa product</p>
+<input type="password" id="deleteProductPassword" placeholder="Mật khẩu product..." style="width:100%;padding:10px;margin-bottom:4px">
 <div id="deleteProductError" style="color:#dd3333;font-size:12px;margin:8px 0;display:none"></div>
 <div style="display:flex;gap:8px;margin-top:12px">
-<button class="btn-danger" onclick="confirmDeleteProduct()" id="deleteProductBtn">Xac Nhan Xoa</button>
-<button onclick="closeDeleteProductModal()" style="background:#1a1a22;color:#aa7777;border:1px solid #cc333344;padding:9px 14px;border-radius:5px;cursor:pointer">Huy</button>
+<button class="btn-danger" onclick="confirmDeleteProduct()" id="deleteProductBtn">Xác Nhận Xóa</button>
+<button onclick="closeDeleteProductModal()" style="background:#1a1a22;color:#aa7777;border:1px solid #cc333344;padding:9px 14px;border-radius:5px;cursor:pointer">Hủy</button>
 </div>
 </div>
 </div>
@@ -848,45 +848,45 @@ tr:hover td{background:#18181e}
 <script>
 const BASE=window.location.origin;
 let authToken='',allKeys=[],allLogs=[],allProducts=[];
-function login(){const u=document.getElementById('loginUser').value,p=document.getElementById('loginPass').value;if(!u||!p)return showToast('Nhap day du thong tin','error');authToken=btoa(u+':'+p);fetch(BASE+'/api/keys',{headers:{'Authorization':'Basic '+authToken}}).then(r=>{if(r.ok){document.getElementById('loginOverlay').style.display='none';document.getElementById('mainContent').style.display='block';refreshData()}else if(r.status===401){showToast('Sai thong tin dang nhap','error');authToken=''}else{showToast('Loi server (HTTP '+r.status+')','error');authToken=''}}).catch(e=>{showToast('Loi ket noi: '+e.message,'error');authToken=''})}
-function checkHealth(){fetch(BASE+'/api/health').then(r=>r.json()).then(d=>{showToast('Server OK | Admin: '+d.admin+' | Supabase: '+d.supabase+' | Keys: '+d.keys_count+(d.products?' | Products: '+d.products.join(', '):''),'success')}).catch(e=>{showToast('Server khong phan hoi','error')})}
+function login(){const u=document.getElementById('loginUser').value,p=document.getElementById('loginPass').value;if(!u||!p)return showToast('Nhập đầy đủ thông tin','error');authToken=btoa(u+':'+p);fetch(BASE+'/api/keys',{headers:{'Authorization':'Basic '+authToken}}).then(r=>{if(r.ok){document.getElementById('loginOverlay').style.display='none';document.getElementById('mainContent').style.display='block';refreshData()}else if(r.status===401){showToast('Sai thông tin đăng nhập','error');authToken=''}else{showToast('Lỗi server (HTTP '+r.status+')','error');authToken=''}}).catch(e=>{showToast('Lỗi kết nối: '+e.message,'error');authToken=''})}
+function checkHealth(){fetch(BASE+'/api/health').then(r=>r.json()).then(d=>{showToast('Server OK | Admin: '+d.admin+' | Supabase: '+d.supabase+' | Keys: '+d.keys_count+(d.products?' | Products: '+d.products.join(', '):''),'success')}).catch(e=>{showToast('Server không phản hồi','error')})}
 function showToast(m,t){const e=document.getElementById('toast');e.textContent=m;e.className='toast toast-'+t;e.style.display='block';setTimeout(()=>e.style.display='none',3500)}
 function api(p,o){o=o||{};o.headers=o.headers||{};o.headers['Authorization']='Basic '+authToken;return fetch(BASE+p,o).then(r=>r.json())}
-function st(x){if(x.status==='banned')return{cls:'status-banned',txt:'Bi khoa'};if(x.status==='expired')return{cls:'status-expired',txt:'Het han'};if(!x.expires_at)return{cls:'status-pending',txt:'Chua kich hoat'};var e=new Date(x.expires_at);if(e<=new Date())return{cls:'status-expired',txt:'Het han'};return{cls:'status-active',txt:'Hoat dong'}}
+function st(x){if(x.status==='banned')return{cls:'status-banned',txt:'Bị khóa'};if(x.status==='expired')return{cls:'status-expired',txt:'Hết hạn'};if(!x.expires_at)return{cls:'status-pending',txt:'Chưa kích hoạt'};var e=new Date(x.expires_at);if(e<=new Date())return{cls:'status-expired',txt:'Hết hạn'};return{cls:'status-active',txt:'Hoạt động'}}
 function getDevInfo(hwid){if(!hwid||hwid===''||hwid==='[]')return{count:0,list:[]};try{if(hwid.startsWith('[')){var arr=JSON.parse(hwid);return{count:arr.length,list:arr}}return{count:1,list:[hwid]}}catch(e){return{count:0,list:[]}}}
 function getProductName(id){const p=allProducts.find(x=>x.id===id);return p?p.name:'unknown'}
 function getProductClass(id){const n=getProductName(id);if(n==='internal')return'product-internal';if(n==='external')return'product-external';if(n==='mobile')return'product-mobile';return''}
-function loadProductFilter(){const s=document.getElementById('productFilter');if(!s)return;const cur=s.value;s.innerHTML='<option value="">Tat ca Product</option>'+allProducts.map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');s.value=cur}
+function loadProductFilter(){const s=document.getElementById('productFilter');if(!s)return;const cur=s.value;s.innerHTML='<option value="">Tất cả Product</option>'+allProducts.map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');s.value=cur}
 function loadCreateProductSelect(){const s=document.getElementById('createProductId');if(!s)return;const cur=s.value;s.innerHTML=allProducts.map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');if(!cur&&allProducts.length>0)s.value=allProducts[0].id;else s.value=cur;const sm=document.getElementById('createProductIdManual');if(sm){const cur2=sm.value;sm.innerHTML=allProducts.map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');if(!cur2&&allProducts.length>0)sm.value=allProducts[0].id;else if(cur2)sm.value=cur2}}
-let onlineTimer;function switchTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));const cap=t.charAt(0).toUpperCase()+t.slice(1)+'Btn';const e=document.getElementById('tab'+cap)||document.getElementById(cap);if(e)e.classList.add('active');document.getElementById('tab'+t).classList.add('active');if(onlineTimer)clearInterval(onlineTimer);if(t==='online'){refreshOnline();onlineTimer=setInterval(refreshOnline,5000)}}
-function refreshData(){Promise.all([api('/api/products').then(r=>{allProducts=r.data||[];loadProductFilter();loadCreateProductSelect()}),api('/api/keys?'+new URLSearchParams({product_id:document.getElementById('productFilter').value||'',status:document.getElementById('statusFilter').value||''})).then(r=>allKeys=r.data||[]),api('/api/logs').then(r=>allLogs=r.data||[]),api('/api/stats').then(r=>{if(r.data)renderStats(r.data)})]).then(()=>{renderTable();renderLogs();refreshProductTable()}).catch(e=>{console.error(e);showToast('Loi tai du lieu','error')})}
+let onlineTimer;function switchTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));const cap=t.charAt(0).toUpperCase()+t.slice(1)+'Btn';const e=document.getElementById('tab'+cap)||document.getElementById(cap);if(e)e.classList.add('active');document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('active');if(onlineTimer)clearInterval(onlineTimer);if(t==='online'){refreshOnline();onlineTimer=setInterval(refreshOnline,5000)}}
+function refreshData(){Promise.all([api('/api/products').then(r=>{allProducts=r.data||[];loadProductFilter();loadCreateProductSelect()}),api('/api/keys?'+new URLSearchParams({product_id:document.getElementById('productFilter').value||'',status:document.getElementById('statusFilter').value||''})).then(r=>allKeys=r.data||[]),api('/api/logs').then(r=>allLogs=r.data||[]),api('/api/stats').then(r=>{if(r.data)renderStats(r.data)})]).then(()=>{renderTable();renderLogs();refreshProductTable()}).catch(e=>{console.error(e);showToast('Lỗi tải dữ liệu','error')})}
 function refreshOnline(){const pid=document.getElementById('productFilter').value;api('/api/online?'+(pid?'product_id='+pid:'')).then(r=>{renderOnline(r.data||[]);const e=document.getElementById('onlineCount');if(e)e.textContent=r.count+' key online'}).catch(()=>{})}
-function renderOnline(d){const t=document.getElementById('onlineTableBody');if(!t)return;if(!d.length){t.innerHTML='<tr><td colspan="9" style="text-align:center;color:#886666">Khong co key online</td></tr>';return}t.innerHTML=d.map((x,i)=>{var s_=st(x);var stxt='<span style="color:'+(s_.cls==='status-active'?'#33cc33':s_.cls==='status-pending'?'#aa7777':'#dd3333')+'">'+s_.txt+'</span>';const ls=x.last_seen?new Date(x.last_seen).toLocaleTimeString('vi-VN'):'-';const tp=x.type||'basic';var di=getDevInfo(x.hwid);var md=x.max_devices||1;var pn=getProductName(x.product_id);var pc=getProductClass(x.product_id);return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td><span class="product-badge '+pc+'">'+pn+'</span></td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td style="font-size:11px">'+(di.count>0?'<span title="'+di.list.join(', ')+'" style="cursor:help">'+di.count+'/'+md+' TB</span>':'<span style="color:#666">0/'+md+' TB</span>')+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+ls+'</td><td>'+stxt+'</td></tr>'}).join('')}
-function renderStats(d){document.getElementById('statsContainer').innerHTML='<div class="stat-card"><div class="num">'+d.total+'</div><div class="label">Tong Key</div></div><div class="stat-card"><div class="num">'+d.active+'</div><div class="label">Hoat Dong</div></div><div class="stat-card"><div class="num">'+d.banned+'</div><div class="label">Bi Khoa</div></div><div class="stat-card"><div class="num">'+d.expired+'</div><div class="label">Het Han</div></div>'}
-function renderTable(){const s=document.getElementById('searchInput').value.toLowerCase(),f=document.getElementById('statusFilter').value,pid=document.getElementById('productFilter').value;let k=allKeys;if(s)k=k.filter(x=>x.key.toLowerCase().includes(s));if(f!=='all')k=k.filter(function(x){var s_=st(x);return s_.cls==='status-'+f||s_.txt.toLowerCase()===f});const t=document.getElementById('keyTableBody');if(!k.length){t.innerHTML='<tr><td colspan="12" style="text-align:center;color:#886666">Khong co du lieu</td></tr>';return}t.innerHTML=k.map((x,i)=>{var s_=st(x);var c=s_.cls,stxt=s_.txt,tp=x.type||'basic';var di=getDevInfo(x.hwid);var md=x.max_devices||1;var devDisplay=di.count>0?'<span title="'+di.list.join(', ')+'" style="cursor:help">'+di.count+'/'+md+' TB</span>':'<span style="color:#666">0/'+md+' TB</span>';var hwidDisplay=di.count>0?'<span style="font-family:monospace;font-size:11px;color:#cc6666" title="'+di.list.join(', ')+'">'+di.list.join(', ')+'</span>':'-';var pn=getProductName(x.product_id);var pc=getProductClass(x.product_id);return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td><span class="product-badge '+pc+'">'+pn+'</span></td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td class="'+c+'">'+stxt+'</td><td>'+new Date(x.created_at).toLocaleDateString('vi-VN')+'</td><td>'+(x.expires_at?new Date(x.expires_at).toLocaleDateString('vi-VN'):'<span style=color:#666>Chua kich hoat</span>')+'</td><td style="font-size:11px">'+devDisplay+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+hwidDisplay+'</td><td>'+(x.user||'-')+'</td><td>'+(x.note||'-')+'</td><td nowrap><button class="action-btn" onclick="showEditPanel(\\''+x.key.replace(/'/g,"\\'")+'\\')">Chinh sua</button></td></tr>'}).join('')}
-function renderLogs(){const t=document.getElementById('logTableBody');if(!allLogs.length){t.innerHTML='<tr><td colspan="5" style="text-align:center;color:#886666">Khong co du lieu</td></tr>';return}t.innerHTML=allLogs.slice(0,50).map(x=>'<tr><td>'+x.id+'</td><td style="color:#cc3333;font-weight:600">'+x.action+'</td><td class="copy-field">'+x.key+'</td><td>'+x.detail+'</td><td>'+new Date(x.created_at).toLocaleString('vi-VN')+'</td></tr>').join('')}
-function renderProductTable(){const t=document.getElementById('productTableBody');if(!allProducts.length){t.innerHTML='<tr><td colspan="6" style="text-align:center;color:#886666">Khong co product</td></tr>';return}t.innerHTML=allProducts.map(p=>'<tr><td>'+p.id+'</td><td style="font-weight:600">'+p.name+'</td><td class="copy-field" style="font-size:12px">'+p.secret+'</td><td style="color:#886666;font-size:12px">********</td><td>'+new Date(p.created_at).toLocaleDateString('vi-VN')+'</td><td><button class="action-btn" onclick="showDeleteProductModal('+p.id+',\\''+p.name+'\\')">Xoa</button></td></tr>').join('')}
+function renderOnline(d){const t=document.getElementById('onlineTableBody');if(!t)return;if(!d.length){t.innerHTML='<tr><td colspan="9" style="text-align:center;color:#886666">Không có key online</td></tr>';return}t.innerHTML=d.map((x,i)=>{var s_=st(x);var stxt='<span style="color:'+(s_.cls==='status-active'?'#33cc33':s_.cls==='status-pending'?'#aa7777':'#dd3333')+'">'+s_.txt+'</span>';const ls=x.last_seen?new Date(x.last_seen).toLocaleTimeString('vi-VN'):'-';const tp=x.type||'basic';var di=getDevInfo(x.hwid);var md=x.max_devices||1;var pn=getProductName(x.product_id);var pc=getProductClass(x.product_id);return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td><span class="product-badge '+pc+'">'+pn+'</span></td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td style="font-size:11px">'+(di.count>0?'<span title="'+di.list.join(', ')+'" style="cursor:help">'+di.count+'/'+md+' TB</span>':'<span style="color:#666">0/'+md+' TB</span>')+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+ls+'</td><td>'+stxt+'</td></tr>'}).join('')}
+function renderStats(d){document.getElementById('statsContainer').innerHTML='<div class="stat-card"><div class="num">'+d.total+'</div><div class="label">Tổng Key</div></div><div class="stat-card"><div class="num">'+d.active+'</div><div class="label">Hoạt Động</div></div><div class="stat-card"><div class="num">'+d.banned+'</div><div class="label">Bị Khóa</div></div><div class="stat-card"><div class="num">'+d.expired+'</div><div class="label">Hết Hạn</div></div>'}
+function renderTable(){const s=document.getElementById('searchInput').value.toLowerCase(),f=document.getElementById('statusFilter').value,pid=document.getElementById('productFilter').value;let k=allKeys;if(s)k=k.filter(x=>x.key.toLowerCase().includes(s));if(f!=='all')k=k.filter(function(x){var s_=st(x);return s_.cls==='status-'+f||s_.txt.toLowerCase()===f});const t=document.getElementById('keyTableBody');if(!k.length){t.innerHTML='<tr><td colspan="12" style="text-align:center;color:#886666">Không có dữ liệu</td></tr>';return}t.innerHTML=k.map((x,i)=>{var s_=st(x);var c=s_.cls,stxt=s_.txt,tp=x.type||'basic';var di=getDevInfo(x.hwid);var md=x.max_devices||1;var devDisplay=di.count>0?'<span title="'+di.list.join(', ')+'" style="cursor:help">'+di.count+'/'+md+' TB</span>':'<span style="color:#666">0/'+md+' TB</span>';var hwidDisplay=di.count>0?'<span style="font-family:monospace;font-size:11px;color:#cc6666" title="'+di.list.join(', ')+'">'+di.list.join(', ')+'</span>':'-';var pn=getProductName(x.product_id);var pc=getProductClass(x.product_id);return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td><span class="product-badge '+pc+'">'+pn+'</span></td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td class="'+c+'">'+stxt+'</td><td>'+new Date(x.created_at).toLocaleDateString('vi-VN')+'</td><td>'+(x.expires_at?new Date(x.expires_at).toLocaleDateString('vi-VN'):'<span style=color:#666>Chưa kích hoạt</span>')+'</td><td style="font-size:11px">'+devDisplay+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+hwidDisplay+'</td><td>'+(x.user||'-')+'</td><td>'+(x.note||'-')+'</td><td nowrap><button class="action-btn" onclick="showEditPanel(\\''+x.key.replace(/'/g,"\\'")+'\\')">Chỉnh sửa</button></td></tr>'}).join('')}
+function renderLogs(){const t=document.getElementById('logTableBody');if(!allLogs.length){t.innerHTML='<tr><td colspan="5" style="text-align:center;color:#886666">Không có dữ liệu</td></tr>';return}t.innerHTML=allLogs.slice(0,50).map(x=>'<tr><td>'+x.id+'</td><td style="color:#cc3333;font-weight:600">'+x.action+'</td><td class="copy-field">'+x.key+'</td><td>'+x.detail+'</td><td>'+new Date(x.created_at).toLocaleString('vi-VN')+'</td></tr>').join('')}
+function renderProductTable(){const t=document.getElementById('productTableBody');if(!allProducts.length){t.innerHTML='<tr><td colspan="6" style="text-align:center;color:#886666">Không có product</td></tr>';return}t.innerHTML=allProducts.map(p=>'<tr><td>'+p.id+'</td><td style="font-weight:600">'+p.name+'</td><td class="copy-field" style="font-size:12px">'+p.secret+'</td><td style="color:#886666;font-size:12px">********</td><td>'+new Date(p.created_at).toLocaleDateString('vi-VN')+'</td><td><button class="action-btn" onclick="showDeleteProductModal('+p.id+',\\''+p.name+'\\')">Xoa</button></td></tr>').join('')}
 function refreshProductTable(){renderProductTable()}
-function toggleKeyMode(){const m=document.querySelector('input[name=keyMode]:checked').value;document.getElementById('autoKeyFields').style.display=m==='auto'?'grid':'none';document.getElementById('manualKeyFields').style.display=m==='manual'?'block':'none';document.getElementById('createModeHint').textContent=m==='auto'?'De trong tien to de tao key random dai (32 ky tu).':'Chi tao duoc 1 key o che do nhap tay.'}
-function createKey(){const mode=document.querySelector('input[name=keyMode]:checked').value,btn=document.getElementById('createBtn'),hint=document.getElementById('createModeHint');if(mode==='auto'){const p=document.getElementById('createProductId').value,d=document.getElementById('createDays').value,c=document.getElementById('createCount').value,g=parseInt(document.getElementById('suffixGroups').value),u=document.getElementById('createUser').value.trim(),n=document.getElementById('createNote').value.trim(),t=document.getElementById('createType').value,md=document.getElementById('createMaxDevices').value,pre=document.getElementById('createPrefix').value.trim();if(!p)return showToast('Chua chon product','error');const body={product_id:parseInt(p),days:parseInt(d),count:parseInt(c),type:t,max_devices:parseInt(md)||1};if(pre){body.prefix=pre;body.suffixLength=g}if(u)body.user=u;if(n)body.note=n;btn.disabled=true;btn.textContent='Dang tao...';hint.textContent='Dang tao key...';api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){let html='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px">';const d_=(Array.isArray(r.data)?r.data[0]:r.data);const exp=d_.expires_at?new Date(d_.expires_at).toLocaleDateString('vi-VN'):'Kich hoat lan dau ('+d_.duration_days+' ngay)';if(r.count>1){html+='<div style="color:#cc3333;font-weight:600;margin-bottom:8px">Da tao '+r.count+' key:</div><div style="max-height:300px;overflow-y:auto">';r.data.forEach((x,i)=>{html+='<div style="padding:6px 10px;margin:3px 0;background:#0d0d11;border-radius:4px;border:1px solid #cc333315;display:flex;align-items:center;gap:8px">'+(i+1)+'. <span class="copy-field" style="font-size:13px;margin:0;flex:1">'+x.key+'</span><button class="action-btn" onclick="copyKey(\\''+x.key+'\\')">Copy</button></div>'});html+='</div>'}else{html+='<div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key moi da tao:</div><span class="copy-field">'+r.data.key+'</span><div style="color:#886666;font-size:12px;margin-top:6px">Het han: '+exp+'</div>'}
-if(r.count>1)html+='<button class="action-btn" onclick="copyAllKeys()" style="margin-top:10px">Copy Tat Ca</button>';html+='</div>';document.getElementById('createResult').innerHTML=html;refreshData();btn.disabled=false;btn.textContent='Tao Key';hint.textContent='De trong tien to de tao key random dai (32 ky tu).'}else{showToast(r.message,'error');btn.disabled=false;btn.textContent='Tao Key';hint.textContent='De trong tien to de tao key random dai (32 ky tu).'}}).catch(()=>{showToast('Loi tao key','error');btn.disabled=false;btn.textContent='Tao Key';hint.textContent='De trong tien to de tao key random dai (32 ky tu).'})}else{const p=document.getElementById('createProductIdManual').value,mk=document.getElementById('createManualKey').value.trim(),d=document.getElementById('createManualDays').value,md=document.getElementById('createManualMaxDevices').value,t=document.getElementById('createManualType').value,u=document.getElementById('createManualUser').value.trim();if(!p)return showToast('Chua chon product','error');if(!mk)return showToast('Nhap key','error');btn.disabled=true;btn.textContent='Dang tao...';hint.textContent='Dang tao key...';const body={product_id:parseInt(p),custom_key:mk,days:parseInt(d)||30,max_devices:parseInt(md)||1,type:t};if(u)body.user=u;api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){document.getElementById('createResult').innerHTML='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px"><div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key moi da tao:</div><span class="copy-field">'+r.data.key+'</span></div>';refreshData();btn.disabled=false;btn.textContent='Tao Key';hint.textContent='Chi tao duoc 1 key o che do nhap tay.'}else{showToast(r.message,'error');btn.disabled=false;btn.textContent='Tao Key';hint.textContent='Chi tao duoc 1 key o che do nhap tay.'}}).catch(()=>{showToast('Loi tao key','error');btn.disabled=false;btn.textContent='Tao Key';hint.textContent='Chi tao duoc 1 key o che do nhap tay.'})}}
-function copyKey(k){navigator.clipboard.writeText(k).then(()=>showToast('Da copy: '+k,'success'))}
-function copyAllKeys(){const r=document.querySelectorAll('#createResult .copy-field');const t=Array.from(r).map(e=>e.textContent).join('\\n');navigator.clipboard.writeText(t).then(()=>showToast('Da copy tat ca key','success'))}
+function toggleKeyMode(){const m=document.querySelector('input[name=keyMode]:checked').value;document.getElementById('autoKeyFields').style.display=m==='auto'?'grid':'none';document.getElementById('manualKeyFields').style.display=m==='manual'?'block':'none';document.getElementById('createModeHint').textContent=m==='auto'?'Để trống tiền tố để tạo key random dài (32 ký tự).':'Chỉ tạo được 1 key ở chế độ nhập tay.'}
+function createKey(){const mode=document.querySelector('input[name=keyMode]:checked').value,btn=document.getElementById('createBtn'),hint=document.getElementById('createModeHint');if(mode==='auto'){const p=document.getElementById('createProductId').value,d=document.getElementById('createDays').value,c=document.getElementById('createCount').value,g=parseInt(document.getElementById('suffixGroups').value),u=document.getElementById('createUser').value.trim(),n=document.getElementById('createNote').value.trim(),t=document.getElementById('createType').value,md=document.getElementById('createMaxDevices').value,pre=document.getElementById('createPrefix').value.trim();if(!p)return showToast('Chưa chọn product','error');const body={product_id:parseInt(p),days:parseInt(d),count:parseInt(c),type:t,max_devices:parseInt(md)||1};if(pre){body.prefix=pre;body.suffixLength=g}if(u)body.user=u;if(n)body.note=n;btn.disabled=true;btn.textContent='Đang tạo...';hint.textContent='Đang tạo key...';api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){let html='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px">';const d_=(Array.isArray(r.data)?r.data[0]:r.data);const exp=d_.expires_at?new Date(d_.expires_at).toLocaleDateString('vi-VN'):'Kích hoạt lần đầu ('+d_.duration_days+' ngày)';if(r.count>1){html+='<div style="color:#cc3333;font-weight:600;margin-bottom:8px">Đã tạo '+r.count+' key:</div><div style="max-height:300px;overflow-y:auto">';r.data.forEach((x,i)=>{html+='<div style="padding:6px 10px;margin:3px 0;background:#0d0d11;border-radius:4px;border:1px solid #cc333315;display:flex;align-items:center;gap:8px">'+(i+1)+'. <span class="copy-field" style="font-size:13px;margin:0;flex:1">'+x.key+'</span><button class="action-btn" onclick="copyKey(\\''+x.key+'\\')">Copy</button></div>'});html+='</div>'}else{html+='<div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key moi da tao:</div><span class="copy-field">'+r.data.key+'</span><div style="color:#886666;font-size:12px;margin-top:6px">Het han: '+exp+'</div>'}
+if(r.count>1)html+='<button class="action-btn" onclick="copyAllKeys()" style="margin-top:10px">Copy Tất Cả</button>';html+='</div>';document.getElementById('createResult').innerHTML=html;refreshData();btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Để trống tiền tố để tạo key random dài (32 ký tự).'}else{showToast(r.message,'error');btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Để trống tiền tố để tạo key random dài (32 ký tự).'}}).catch(()=>{showToast('Lỗi tạo key','error');btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Để trống tiền tố để tạo key random dài (32 ký tự).'})}else{const p=document.getElementById('createProductIdManual').value,mk=document.getElementById('createManualKey').value.trim(),d=document.getElementById('createManualDays').value,md=document.getElementById('createManualMaxDevices').value,t=document.getElementById('createManualType').value,u=document.getElementById('createManualUser').value.trim();if(!p)return showToast('Chưa chọn product','error');if(!mk)return showToast('Nhập key','error');btn.disabled=true;btn.textContent='Đang tạo...';hint.textContent='Đang tạo key...';const body={product_id:parseInt(p),custom_key:mk,days:parseInt(d)||30,max_devices:parseInt(md)||1,type:t};if(u)body.user=u;api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){document.getElementById('createResult').innerHTML='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px"><div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key mới đã tạo:</div><span class="copy-field">'+r.data.key+'</span></div>';refreshData();btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Chỉ tạo được 1 key ở chế độ nhập tay.'}else{showToast(r.message,'error');btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Chỉ tạo được 1 key ở chế độ nhập tay.'}}).catch(()=>{showToast('Lỗi tạo key','error');btn.disabled=false;btn.textContent='Tao Key';hint.textContent='Chi tao duoc 1 key o che do nhap tay.'})}}
+function copyKey(k){navigator.clipboard.writeText(k).then(()=>showToast('Đã copy: '+k,'success'))}
+function copyAllKeys(){const r=document.querySelectorAll('#createResult .copy-field');const t=Array.from(r).map(e=>e.textContent).join('\\n');navigator.clipboard.writeText(t).then(()=>showToast('Đã copy tất cả key','success'))}
 let editKeyData=null;
-function showEditPanel(k){editKeyData=allKeys.find(x=>x.key===k);const x=editKeyData;if(!x)return showToast('Khong tim thay key','error');document.getElementById('editPanelTitle').textContent='Chinh Sua Key';document.getElementById('editKeyDisplay').textContent=x.key;document.getElementById('editKeyType').value=x.type||'basic';var es_=st(x);document.getElementById('editKeyStatus').textContent=es_.txt;document.getElementById('editKeyStatus').style.color=es_.cls==='status-active'?'#33cc33':es_.cls==='status-pending'?'#aa7777':'#dd3333';document.getElementById('editKeyProduct').textContent=getProductName(x.product_id);document.getElementById('editKeyExpiry').textContent=x.expires_at?new Date(x.expires_at).toLocaleString('vi-VN'):'Chua kich hoat';var di=getDevInfo(x.hwid);var md=x.max_devices||1;document.getElementById('editKeyHwid').textContent=di.count>0?di.list.join(', '):'Chua co';document.getElementById('editKeyDevices').textContent=di.count+'/'+md+' thiet bi';document.getElementById('editMaxDevices').value=md;document.getElementById('editKeyUser').textContent=x.user||'-';document.getElementById('editKeyNote').textContent=x.note||'-';const banBtn=document.getElementById('editBanBtn');banBtn.textContent=x.status==='active'?'Khoa (Ban)':'Mo (Unban)';banBtn.style.background=x.status==='active'?'#cc3333':'#336633';document.getElementById('editOverlay').style.display='flex'}
+function showEditPanel(k){editKeyData=allKeys.find(x=>x.key===k);const x=editKeyData;if(!x)return showToast('Không tìm thấy key','error');document.getElementById('editPanelTitle').textContent='Chỉnh Sửa Key';document.getElementById('editKeyDisplay').textContent=x.key;document.getElementById('editKeyType').value=x.type||'basic';var es_=st(x);document.getElementById('editKeyStatus').textContent=es_.txt;document.getElementById('editKeyStatus').style.color=es_.cls==='status-active'?'#33cc33':es_.cls==='status-pending'?'#aa7777':'#dd3333';document.getElementById('editKeyProduct').textContent=getProductName(x.product_id);document.getElementById('editKeyExpiry').textContent=x.expires_at?new Date(x.expires_at).toLocaleString('vi-VN'):'Chưa kích hoạt';var di=getDevInfo(x.hwid);var md=x.max_devices||1;document.getElementById('editKeyHwid').textContent=di.count>0?di.list.join(', '):'Chưa có';document.getElementById('editKeyDevices').textContent=di.count+'/'+md+' thiết bị';document.getElementById('editMaxDevices').value=md;document.getElementById('editKeyUser').textContent=x.user||'-';document.getElementById('editKeyNote').textContent=x.note||'-';const banBtn=document.getElementById('editBanBtn');banBtn.textContent=x.status==='active'?'Khóa (Ban)':'Mở (Unban)';banBtn.style.background=x.status==='active'?'#cc3333':'#336633';document.getElementById('editOverlay').style.display='flex'}
 function closeEditPanel(){document.getElementById('editOverlay').style.display='none';editKeyData=null}
-function saveKeyType(){const x=editKeyData;if(!x)return;const t=document.getElementById('editKeyType').value;if(t===x.type)return showToast('Loai key khong thay doi','success');api('/api/keys/'+encodeURIComponent(x.key)+'/type',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:t})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){x.type=t;refreshData();closeEditPanel()}})}
+function saveKeyType(){const x=editKeyData;if(!x)return;const t=document.getElementById('editKeyType').value;if(t===x.type)return showToast('Loại key không thay đổi','success');api('/api/keys/'+encodeURIComponent(x.key)+'/type',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:t})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){x.type=t;refreshData();closeEditPanel()}})}
 function extendCurrentKey(){const x=editKeyData;if(!x)return;const d=document.getElementById('editExtendDays').value;if(!d||isNaN(d)||parseInt(d)<1)return;api('/api/keys/'+encodeURIComponent(x.key)+'/extend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:parseInt(d)})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
-function toggleBanKey(){const x=editKeyData;if(!x)return;const isBan=x.status==='active',action=isBan?'ban':'unban',msg=isBan?'Khoa key '+x.key+'?':'Mo key '+x.key+'?';if(!confirm(msg))return;api('/api/keys/'+encodeURIComponent(x.key)+'/'+action,{method:'POST'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
+function toggleBanKey(){const x=editKeyData;if(!x)return;const isBan=x.status==='active',action=isBan?'ban':'unban',msg=isBan?'Khóa key '+x.key+'?':'Mở key '+x.key+'?';if(!confirm(msg))return;api('/api/keys/'+encodeURIComponent(x.key)+'/'+action,{method:'POST'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
 function resetHwidCurrent(){const x=editKeyData;if(!x)return;if(!confirm('Reset HWID cho key '+x.key+'?'))return;api('/api/keys/'+encodeURIComponent(x.key)+'/reset-hwid',{method:'POST'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
-function deleteCurrentKey(){const x=editKeyData;if(!x)return;if(!confirm('Xoa key '+x.key+'?'))return;api('/api/keys/'+encodeURIComponent(x.key),{method:'DELETE'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
-function copyCurrentKey(){const x=editKeyData;if(!x)return;navigator.clipboard.writeText(x.key).then(()=>showToast('Da copy: '+x.key,'success'))}
-function saveMaxDevices(){const x=editKeyData;if(!x)return;const md=parseInt(document.getElementById('editMaxDevices').value);if(!md||md<1||md>100)return showToast('So thiet bi khong hop le (1-100)','error');api('/api/keys/'+encodeURIComponent(x.key)+'/max-devices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({max_devices:md})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){x.max_devices=md;refreshData();closeEditPanel()}})}
-function createProduct(){const name=document.getElementById('newProductName').value.trim();const secret=document.getElementById('newProductSecret').value.trim();const password=document.getElementById('newProductPassword').value;if(!name||!secret)return showToast('Nhap ten va secret','error');if(!password)return showToast('Nhap mat khau cho product','error');api('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,secret,password})}).then(r=>{if(r.success){showToast('Da tao product: '+r.data.name,'success');document.getElementById('newProductName').value='';document.getElementById('newProductSecret').value='';document.getElementById('newProductPassword').value='';refreshData()}else showToast(r.message,'error')})}
+function deleteCurrentKey(){const x=editKeyData;if(!x)return;if(!confirm('Xóa key '+x.key+'?'))return;api('/api/keys/'+encodeURIComponent(x.key),{method:'DELETE'}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){refreshData();closeEditPanel()}})}
+function copyCurrentKey(){const x=editKeyData;if(!x)return;navigator.clipboard.writeText(x.key).then(()=>showToast('Đã copy: '+x.key,'success'))}
+function saveMaxDevices(){const x=editKeyData;if(!x)return;const md=parseInt(document.getElementById('editMaxDevices').value);if(!md||md<1||md>100)return showToast('Số thiết bị không hợp lệ (1-100)','error');api('/api/keys/'+encodeURIComponent(x.key)+'/max-devices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({max_devices:md})}).then(r=>{showToast(r.message,r.success?'success':'error');if(r.success){x.max_devices=md;refreshData();closeEditPanel()}})}
+function createProduct(){const name=document.getElementById('newProductName').value.trim();const secret=document.getElementById('newProductSecret').value.trim();const password=document.getElementById('newProductPassword').value;if(!name||!secret)return showToast('Nhập tên và secret','error');if(!password)return showToast('Nhập mật khẩu cho product','error');api('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,secret,password})}).then(r=>{if(r.success){showToast('Đã tạo product: '+r.data.name,'success');document.getElementById('newProductName').value='';document.getElementById('newProductSecret').value='';document.getElementById('newProductPassword').value='';refreshData()}else showToast(r.message,'error')})}
 let delProdId=null,delProdName='';
-function showDeleteProductModal(id,name){delProdId=id;delProdName=name;document.getElementById('deleteProductInfo').textContent='Nhap mat khau de xoa product "'+name+'"';document.getElementById('deleteProductPassword').value='';document.getElementById('deleteProductError').style.display='none';document.getElementById('deleteProductOverlay').style.display='flex'}
+function showDeleteProductModal(id,name){delProdId=id;delProdName=name;document.getElementById('deleteProductInfo').textContent='Nhập mật khẩu để xóa product "'+name+'"';document.getElementById('deleteProductPassword').value='';document.getElementById('deleteProductError').style.display='none';document.getElementById('deleteProductOverlay').style.display='flex'}
 function closeDeleteProductModal(){document.getElementById('deleteProductOverlay').style.display='none';delProdId=null;delProdName=''}
-function confirmDeleteProduct(){const pw=document.getElementById('deleteProductPassword').value;if(!pw){document.getElementById('deleteProductError').textContent='Vui long nhap mat khau';document.getElementById('deleteProductError').style.display='block';return}const btn=document.getElementById('deleteProductBtn');btn.disabled=true;btn.textContent='Dang xoa...';api('/api/products/'+delProdId,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})}).then(r=>{if(r.success){closeDeleteProductModal();showToast('Da xoa product "'+delProdName+'"','success');refreshData()}else{document.getElementById('deleteProductError').textContent=r.message;document.getElementById('deleteProductError').style.display='block';btn.disabled=false;btn.textContent='Xac Nhan Xoa'}}).catch(()=>{document.getElementById('deleteProductError').textContent='Loi ket noi';document.getElementById('deleteProductError').style.display='block';btn.disabled=false;btn.textContent='Xac Nhan Xoa'})}
+function confirmDeleteProduct(){const pw=document.getElementById('deleteProductPassword').value;if(!pw){document.getElementById('deleteProductError').textContent='Vui lòng nhập mật khẩu';document.getElementById('deleteProductError').style.display='block';return}const btn=document.getElementById('deleteProductBtn');btn.disabled=true;btn.textContent='Đang xóa...';api('/api/products/'+delProdId,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})}).then(r=>{if(r.success){closeDeleteProductModal();showToast('Đã xóa product "'+delProdName+'"','success');refreshData()}else{document.getElementById('deleteProductError').textContent=r.message;document.getElementById('deleteProductError').style.display='block';btn.disabled=false;btn.textContent='Xác Nhận Xóa'}}).catch(()=>{document.getElementById('deleteProductError').textContent='Lỗi kết nối';document.getElementById('deleteProductError').style.display='block';btn.disabled=false;btn.textContent='Xác Nhận Xóa'})}
 document.getElementById('productFilter').addEventListener('change',function(){refreshData()})
 </script>
 </body>
