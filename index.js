@@ -139,7 +139,7 @@ function checkRateLimit(ip, maxReqs = 5, windowMs = 1000) {
 app.get('/api/verify', async (req, res) => {
   try {
     const { key, hwid, secret } = req.query;
-    if (!key || !hwid) {
+    if (!key || !hwid || !secret) {
       return res.json({ success: false, status: 'invalid', message: 'Authentication failed' });
     }
 
@@ -149,26 +149,24 @@ app.get('/api/verify', async (req, res) => {
     }
 
     // 1. Resolve product từ secret
-    let product = null;
-    if (secret) {
-      product = await resolveProduct(secret);
-      if (!product) {
-        // Không phân biệt secret sai → dùng chung status 'invalid'
-        return res.json({ success: false, status: 'invalid', message: 'Authentication failed' });
-      }
+    const product = await resolveProduct(secret);
+    if (!product) {
+      return res.json({ success: false, status: 'invalid', message: 'Authentication failed' });
     }
 
-    // 2. Atomic: toàn bộ check (status, expiry, HWID) trong 1 RPC lock
+    // 2. Preliminary product check (tránh gọi RPC khi sai product)
+    const { data: keyCheck } = await supabase.from('keys').select('product_id').eq('key', key).maybeSingle();
+    if (!keyCheck || keyCheck.product_id !== product.id) {
+      return res.json({ success: false, status: 'invalid', message: 'Authentication failed' });
+    }
+
+    // 3. Atomic: toàn bộ check (status, expiry, HWID, product) trong 1 RPC lock
     const { data: rpc, error: rpcErr } = await supabase.rpc('register_hwid', {
       p_key: key,
       p_hwid: hwid,
+      p_product_id: product.id,
     });
     if (rpcErr) throw rpcErr;
-
-    // 3. Kiểm tra product match
-    if (product && rpc.product_id !== product.id) {
-      return res.json({ success: false, status: 'invalid', message: 'Authentication failed' });
-    }
 
     // 4. Nếu RPC trả về không valid → luôn trả generic error
     if (rpc.status !== 'valid') {
@@ -179,7 +177,7 @@ app.get('/api/verify', async (req, res) => {
     await supabase.from('activity_log').insert({
       action: 'verify',
       key: key,
-      detail: `Verified from HWID: ${hwid}${product ? ' | Product: ' + product.name : ''} | IP: ${req.ip}`,
+      detail: `Verified from HWID: ${hwid} | Product: ${product.name} | IP: ${req.ip}`,
       ip: req.ip,
     });
 
