@@ -686,52 +686,52 @@ tr:hover td{background:#18181e}
 <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="keyMode" value="auto" checked onchange="toggleKeyMode()"> Tự động (tiền tố + random)</label>
 <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="keyMode" value="manual" onchange="toggleKeyMode()"> Nhập tay</label>
 </div>
-<div id="autoKeyFields" style="display:grid;grid-template-columns:1fr 120px 80px 80px 1fr 1fr;gap:10px;margin-bottom:10px;align-items:start">
+<div id="autoKeyFields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px;align-items:start">
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">PRODUCT</label>
-<select id="createProductId" style="padding:9px 8px"></select>
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">PRODUCT</label>
+<select id="createProductId" style="padding:9px 8px;width:100%"></select>
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">PREFIX + LENGTH</label>
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">PREFIX + LENGTH</label>
 <div style="display:flex;align-items:center;gap:4px">
 <input type="text" id="createPrefix" placeholder="PLX" maxlength="8" value="PLX" style="width:65px;flex:none;text-align:center;text-transform:uppercase;padding:9px 6px">
 <span style="color:#886666;font-size:13px">-</span>
 <select id="suffixGroups" style="flex:1;padding:9px 6px">
-<option value="8">2 nhom</option>
-<option value="12" selected>3 nhom</option>
-<option value="16">4 nhom</option>
-<option value="20">5 nhom</option>
-<option value="24">6 nhom</option>
+<option value="8">2 nhóm</option>
+<option value="12" selected>3 nhóm</option>
+<option value="16">4 nhóm</option>
+<option value="20">5 nhóm</option>
+<option value="24">6 nhóm</option>
 </select>
 </div>
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NGÀY HẾT HẠN</label>
-<input type="number" id="createDays" value="30" min="1" max="3650">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">NGÀY HẾT HẠN</label>
+<input type="number" id="createDays" value="30" min="1" max="3650" style="width:100%">
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">SỐ LƯỢNG</label>
-<input type="number" id="createCount" value="1" min="1" max="500">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">SỐ LƯỢNG</label>
+<input type="number" id="createCount" value="1" min="1" max="500" style="width:100%">
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">SỐ THIẾT BỊ</label>
-<input type="number" id="createMaxDevices" value="1" min="1" max="100">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">SỐ THIẾT BỊ</label>
+<input type="number" id="createMaxDevices" value="1" min="1" max="100" style="width:100%">
 </div>
 <div style="display:flex;flex-direction:column;gap:4px;max-width:100px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">LOẠI KEY</label>
-<select id="createType" style="padding:9px 8px">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">LOẠI KEY</label>
+<select id="createType" style="padding:9px 8px;width:100%">
 <option value="basic">Basic</option>
 <option value="pro">Pro</option>
 <option value="vip">VIP</option>
 </select>
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NGƯỜI DÙNG</label>
-<input type="text" id="createUser" placeholder="Không bắt buộc">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">NGƯỜI DÙNG</label>
+<input type="text" id="createUser" placeholder="Không bắt buộc" style="width:100%">
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">GHI CHÚ</label>
-<input type="text" id="createNote" placeholder="Không bắt buộc">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">GHI CHÚ</label>
+<input type="text" id="createNote" placeholder="Không bắt buộc" style="width:100%">
 </div>
 </div>
 <div id="manualKeyFields" style="display:none;margin-bottom:10px">
