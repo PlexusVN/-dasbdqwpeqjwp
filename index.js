@@ -1,19 +1,3 @@
-// ============================================================
-//  ROX CHEATS - NODE.JS AUTH SERVER (Multi-Product)
-//  Deploy lên Render.com, Supabase làm database
-//  UptimeRobot gọi GET /api/health mỗi 5 phút để giữ server
-// ============================================================
-//  HƯỚNG DẪN:
-//  1. Tạo Supabase project, chạy schema.sql (AUTH/sql/schema.sql)
-//  2. Push code lên GitHub
-//  3. Render.com > New > Web Service > kết nối GitHub repo
-//  4. Set environment variables:
-//     SUPABASE_URL, SUPABASE_SERVICE_KEY, ADMIN_USER, ADMIN_PASS
-//  5. UptimeRobot > New Monitor > HTTP(s) >
-//     URL: https://ten-render-project.onrender.com/api/health
-//     Interval: 5 minutes
-//  6. Deploy
-// ============================================================
 
 const express = require('express');
 const cors = require('cors');
@@ -667,7 +651,7 @@ tr:hover td{background:#18181e}
 <div class="card">
 <div class="form-row">
 <input type="text" id="searchInput" placeholder="Tìm key..." oninput="renderTable()">
-<select id="productFilter" onchange="renderTable()"></select>
+<select id="productFilter"></select>
 <select id="statusFilter" onchange="renderTable()">
 <option value="all">Tất cả</option><option value="pending">Chưa kích hoạt</option><option value="active">Hoạt động</option><option value="banned">Bị khóa</option><option value="expired">Hết hạn</option>
 </select>
@@ -686,15 +670,15 @@ tr:hover td{background:#18181e}
 <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="keyMode" value="auto" checked onchange="toggleKeyMode()"> Tự động (tiền tố + random)</label>
 <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="keyMode" value="manual" onchange="toggleKeyMode()"> Nhập tay</label>
 </div>
-<div id="autoKeyFields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px;align-items:start">
+<div id="autoKeyFields" style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px">
 <div style="display:flex;flex-direction:column;gap:4px">
 <label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">PRODUCT</label>
 <select id="createProductId" style="padding:9px 8px;width:100%"></select>
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
 <label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">PREFIX + LENGTH</label>
-<div style="display:flex;align-items:center;gap:4px">
-<input type="text" id="createPrefix" placeholder="PLX" maxlength="8" value="PLX" style="width:65px;flex:none;text-align:center;text-transform:uppercase;padding:9px 6px">
+<div style="display:flex;align-items:center;gap:4px;width:100%">
+<input type="text" id="createPrefix" placeholder="PLX" maxlength="8" value="PLX" style="width:70px;flex:none;text-align:center;text-transform:uppercase;padding:9px 6px">
 <span style="color:#886666;font-size:13px">-</span>
 <select id="suffixGroups" style="flex:1;padding:9px 6px">
 <option value="8">2 nhóm</option>
@@ -717,46 +701,44 @@ tr:hover td{background:#18181e}
 <label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">SỐ THIẾT BỊ</label>
 <input type="number" id="createMaxDevices" value="1" min="1" max="100" style="width:100%">
 </div>
-<div style="display:flex;flex-direction:column;gap:4px;max-width:100px">
+<div style="display:flex;flex-direction:column;gap:4px">
 <label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">LOẠI KEY</label>
-<select id="createType" style="padding:9px 8px;width:100%">
+<select id="createType" style="padding:9px 8px;width:100%;max-width:280px">
 <option value="basic">Basic</option>
 <option value="pro">Pro</option>
 <option value="vip">VIP</option>
 </select>
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">NGƯỜI DÙNG</label>
-<input type="text" id="createUser" placeholder="Không bắt buộc" style="width:100%">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">NGƯỜI DÙNG <span style="color:#cc3333">*</span></label>
+<input type="text" id="createUser" placeholder="Nhập tên người dùng" required style="width:100%">
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
 <label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">GHI CHÚ</label>
 <input type="text" id="createNote" placeholder="Không bắt buộc" style="width:100%">
 </div>
 </div>
-<div id="manualKeyFields" style="display:none;margin-bottom:10px">
-<div style="display:grid;grid-template-columns:1fr 120px 80px 80px 1fr;gap:10px;align-items:start">
+<div id="manualKeyFields" style="display:none;flex-direction:column;gap:10px;margin-bottom:10px">
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">PRODUCT</label>
-<select id="createProductIdManual" style="padding:9px 8px"></select>
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">PRODUCT</label>
+<select id="createProductIdManual" style="padding:9px 8px;width:100%"></select>
 </div>
-<div style="display:flex;flex-direction:column;gap:4px;grid-column:span 2">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NHẬP KEY</label>
+<div style="display:flex;flex-direction:column;gap:4px">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">NHẬP KEY</label>
 <input type="text" id="createManualKey" placeholder="Nhập mã key..." style="width:100%;font-family:monospace;padding:9px 8px">
 <div style="font-size:11px;color:#886666;margin-top:2px">Tùy chọn: <input type="number" id="createManualDays" value="30" min="1" max="3650" style="width:70px;padding:4px 6px;font-size:11px"> ngày | <input type="number" id="createManualMaxDevices" value="1" min="1" max="100" style="width:60px;padding:4px 6px;font-size:11px"> thiết bị</div>
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">LOAI KEY</label>
-<select id="createManualType" style="padding:9px 8px">
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">LOẠI KEY</label>
+<select id="createManualType" style="padding:9px 8px;width:100%;max-width:280px">
 <option value="basic">Basic</option>
 <option value="pro">Pro</option>
 <option value="vip">VIP</option>
 </select>
 </div>
 <div style="display:flex;flex-direction:column;gap:4px">
-<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px">NGƯỜI DÙNG</label>
-<input type="text" id="createManualUser" placeholder="Không bắt buộc" style="width:100%">
-</div>
+<label style="color:#aa7777;font-size:11px;font-weight:600;letter-spacing:0.3px;white-space:nowrap;">NGƯỜI DÙNG <span style="color:#cc3333">*</span></label>
+<input type="text" id="createManualUser" placeholder="Nhập tên người dùng" required style="width:100%">
 </div>
 </div>
 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -858,7 +840,7 @@ function getProductName(id){const p=allProducts.find(x=>x.id===id);return p?p.na
 function getProductClass(id){const n=getProductName(id);if(n==='internal')return'product-internal';if(n==='external')return'product-external';if(n==='mobile')return'product-mobile';return''}
 function loadProductFilter(){const s=document.getElementById('productFilter');if(!s)return;const cur=s.value;s.innerHTML='<option value="">Tất cả Product</option>'+allProducts.map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');s.value=cur}
 function loadCreateProductSelect(){const s=document.getElementById('createProductId');if(!s)return;const cur=s.value;s.innerHTML=allProducts.map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');if(!cur&&allProducts.length>0)s.value=allProducts[0].id;else s.value=cur;const sm=document.getElementById('createProductIdManual');if(sm){const cur2=sm.value;sm.innerHTML=allProducts.map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');if(!cur2&&allProducts.length>0)sm.value=allProducts[0].id;else if(cur2)sm.value=cur2}}
-let onlineTimer;function switchTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));const cap=t.charAt(0).toUpperCase()+t.slice(1)+'Btn';const e=document.getElementById('tab'+cap)||document.getElementById(cap);if(e)e.classList.add('active');document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('active');if(onlineTimer)clearInterval(onlineTimer);if(t==='online'){refreshOnline();onlineTimer=setInterval(refreshOnline,5000)}}
+let refreshTimer;function switchTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));const cap=t.charAt(0).toUpperCase()+t.slice(1)+'Btn';const e=document.getElementById('tab'+cap)||document.getElementById(cap);if(e)e.classList.add('active');document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('active');if(refreshTimer)clearInterval(refreshTimer);if(t==='keys'){refreshData();refreshTimer=setInterval(refreshData,2000)}else if(t==='online'){refreshOnline();refreshTimer=setInterval(refreshOnline,2000)}else if(t==='logs'){refreshData();refreshTimer=setInterval(refreshData,2000)}else if(t==='products'){refreshData();refreshTimer=setInterval(refreshData,2000)}}
 function refreshData(){Promise.all([api('/api/products').then(r=>{allProducts=r.data||[];loadProductFilter();loadCreateProductSelect()}),api('/api/keys?'+new URLSearchParams({product_id:document.getElementById('productFilter').value||'',status:document.getElementById('statusFilter').value||''})).then(r=>allKeys=r.data||[]),api('/api/logs').then(r=>allLogs=r.data||[]),api('/api/stats').then(r=>{if(r.data)renderStats(r.data)})]).then(()=>{renderTable();renderLogs();refreshProductTable()}).catch(e=>{console.error(e);showToast('Lỗi tải dữ liệu','error')})}
 function refreshOnline(){const pid=document.getElementById('productFilter').value;api('/api/online?'+(pid?'product_id='+pid:'')).then(r=>{renderOnline(r.data||[]);const e=document.getElementById('onlineCount');if(e)e.textContent=r.count+' key online'}).catch(()=>{})}
 function renderOnline(d){const t=document.getElementById('onlineTableBody');if(!t)return;if(!d.length){t.innerHTML='<tr><td colspan="9" style="text-align:center;color:#886666">Không có key online</td></tr>';return}t.innerHTML=d.map((x,i)=>{var s_=st(x);var stxt='<span style="color:'+(s_.cls==='status-active'?'#33cc33':s_.cls==='status-pending'?'#aa7777':'#dd3333')+'">'+s_.txt+'</span>';const ls=x.last_seen?new Date(x.last_seen).toLocaleTimeString('vi-VN'):'-';const tp=x.type||'basic';var di=getDevInfo(x.hwid);var md=x.max_devices||1;var pn=getProductName(x.product_id);var pc=getProductClass(x.product_id);return '<tr><td>'+(i+1)+'</td><td class="copy-field">'+x.key+'</td><td><span class="product-badge '+pc+'">'+pn+'</span></td><td style="font-size:11px">'+(tp==='vip'?'<span style="color:#ffcc00;font-weight:600">VIP</span>':tp==='pro'?'<span style="color:#cc66ff;font-weight:600">Pro</span>':'<span style="color:#aa7777">Basic</span>')+'</td><td style="font-size:11px">'+(di.count>0?'<span title="'+di.list.join(', ')+'" style="cursor:help">'+di.count+'/'+md+' TB</span>':'<span style="color:#666">0/'+md+' TB</span>')+'</td><td style="font-family:monospace;font-size:11px;color:#cc6666">'+(x.hwid||'-')+'</td><td>'+(x.user||'-')+'</td><td>'+ls+'</td><td>'+stxt+'</td></tr>'}).join('')}
@@ -868,8 +850,8 @@ function renderLogs(){const t=document.getElementById('logTableBody');if(!allLog
 function renderProductTable(){const t=document.getElementById('productTableBody');if(!allProducts.length){t.innerHTML='<tr><td colspan="6" style="text-align:center;color:#886666">Không có product</td></tr>';return}t.innerHTML=allProducts.map(p=>'<tr><td>'+p.id+'</td><td style="font-weight:600">'+p.name+'</td><td class="copy-field" style="font-size:12px">'+p.secret+'</td><td style="color:#886666;font-size:12px">********</td><td>'+new Date(p.created_at).toLocaleDateString('vi-VN')+'</td><td><button class="action-btn" onclick="showDeleteProductModal('+p.id+',\\''+p.name+'\\')">Xoa</button></td></tr>').join('')}
 function refreshProductTable(){renderProductTable()}
 function toggleKeyMode(){const m=document.querySelector('input[name=keyMode]:checked').value;document.getElementById('autoKeyFields').style.display=m==='auto'?'grid':'none';document.getElementById('manualKeyFields').style.display=m==='manual'?'block':'none';document.getElementById('createModeHint').textContent=m==='auto'?'Để trống tiền tố để tạo key random dài (32 ký tự).':'Chỉ tạo được 1 key ở chế độ nhập tay.'}
-function createKey(){const mode=document.querySelector('input[name=keyMode]:checked').value,btn=document.getElementById('createBtn'),hint=document.getElementById('createModeHint');if(mode==='auto'){const p=document.getElementById('createProductId').value,d=document.getElementById('createDays').value,c=document.getElementById('createCount').value,g=parseInt(document.getElementById('suffixGroups').value),u=document.getElementById('createUser').value.trim(),n=document.getElementById('createNote').value.trim(),t=document.getElementById('createType').value,md=document.getElementById('createMaxDevices').value,pre=document.getElementById('createPrefix').value.trim();if(!p)return showToast('Chưa chọn product','error');const body={product_id:parseInt(p),days:parseInt(d),count:parseInt(c),type:t,max_devices:parseInt(md)||1};if(pre){body.prefix=pre;body.suffixLength=g}if(u)body.user=u;if(n)body.note=n;btn.disabled=true;btn.textContent='Đang tạo...';hint.textContent='Đang tạo key...';api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){let html='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px">';const d_=(Array.isArray(r.data)?r.data[0]:r.data);const exp=d_.expires_at?new Date(d_.expires_at).toLocaleDateString('vi-VN'):'Kích hoạt lần đầu ('+d_.duration_days+' ngày)';if(r.count>1){html+='<div style="color:#cc3333;font-weight:600;margin-bottom:8px">Đã tạo '+r.count+' key:</div><div style="max-height:300px;overflow-y:auto">';r.data.forEach((x,i)=>{html+='<div style="padding:6px 10px;margin:3px 0;background:#0d0d11;border-radius:4px;border:1px solid #cc333315;display:flex;align-items:center;gap:8px">'+(i+1)+'. <span class="copy-field" style="font-size:13px;margin:0;flex:1">'+x.key+'</span><button class="action-btn" onclick="copyKey(\\''+x.key+'\\')">Copy</button></div>'});html+='</div>'}else{html+='<div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key moi da tao:</div><span class="copy-field">'+r.data.key+'</span><div style="color:#886666;font-size:12px;margin-top:6px">Het han: '+exp+'</div>'}
-if(r.count>1)html+='<button class="action-btn" onclick="copyAllKeys()" style="margin-top:10px">Copy Tất Cả</button>';html+='</div>';document.getElementById('createResult').innerHTML=html;refreshData();btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Để trống tiền tố để tạo key random dài (32 ký tự).'}else{showToast(r.message,'error');btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Để trống tiền tố để tạo key random dài (32 ký tự).'}}).catch(()=>{showToast('Lỗi tạo key','error');btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Để trống tiền tố để tạo key random dài (32 ký tự).'})}else{const p=document.getElementById('createProductIdManual').value,mk=document.getElementById('createManualKey').value.trim(),d=document.getElementById('createManualDays').value,md=document.getElementById('createManualMaxDevices').value,t=document.getElementById('createManualType').value,u=document.getElementById('createManualUser').value.trim();if(!p)return showToast('Chưa chọn product','error');if(!mk)return showToast('Nhập key','error');btn.disabled=true;btn.textContent='Đang tạo...';hint.textContent='Đang tạo key...';const body={product_id:parseInt(p),custom_key:mk,days:parseInt(d)||30,max_devices:parseInt(md)||1,type:t};if(u)body.user=u;api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){document.getElementById('createResult').innerHTML='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px"><div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key mới đã tạo:</div><span class="copy-field">'+r.data.key+'</span></div>';refreshData();btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Chỉ tạo được 1 key ở chế độ nhập tay.'}else{showToast(r.message,'error');btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Chỉ tạo được 1 key ở chế độ nhập tay.'}}).catch(()=>{showToast('Lỗi tạo key','error');btn.disabled=false;btn.textContent='Tao Key';hint.textContent='Chi tao duoc 1 key o che do nhap tay.'})}}
+function createKey(){const mode=document.querySelector('input[name=keyMode]:checked').value,btn=document.getElementById('createBtn'),hint=document.getElementById('createModeHint');if(mode==='auto'){const p=document.getElementById('createProductId').value,d=document.getElementById('createDays').value,c=document.getElementById('createCount').value,g=parseInt(document.getElementById('suffixGroups').value),u=document.getElementById('createUser').value.trim(),n=document.getElementById('createNote').value.trim(),t=document.getElementById('createType').value,md=document.getElementById('createMaxDevices').value,pre=document.getElementById('createPrefix').value.trim();if(!p)return showToast('Chưa chọn product','error');if(!u)return showToast('Vui lòng nhập người dùng','error');const body={product_id:parseInt(p),days:parseInt(d),count:parseInt(c),type:t,max_devices:parseInt(md)||1,user:u};if(pre){body.prefix=pre;body.suffixLength=g}if(n)body.note=n;btn.disabled=true;btn.textContent='Đang tạo...';hint.textContent='Đang tạo key...';api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){let html='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px">';const d_=(Array.isArray(r.data)?r.data[0]:r.data);const exp=d_.expires_at?new Date(d_.expires_at).toLocaleDateString('vi-VN'):'Kích hoạt lần đầu ('+d_.duration_days+' ngày)';if(r.count>1){html+='<div style="color:#cc3333;font-weight:600;margin-bottom:8px">Đã tạo '+r.count+' key:</div><div style="max-height:300px;overflow-y:auto">';r.data.forEach((x,i)=>{html+='<div style="padding:6px 10px;margin:3px 0;background:#0d0d11;border-radius:4px;border:1px solid #cc333315;display:flex;align-items:center;gap:8px">'+(i+1)+'. <span class="copy-field" style="font-size:13px;margin:0;flex:1">'+x.key+'</span><button class="action-btn" onclick="copyKey(\\''+x.key+'\\')">Copy</button></div>'});html+='</div>'}else{html+='<div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key moi da tao:</div><span class="copy-field">'+r.data.key+'</span><div style="color:#886666;font-size:12px;margin-top:6px">Het han: '+exp+'</div>'}
+if(r.count>1)html+='<button class="action-btn" onclick="copyAllKeys()" style="margin-top:10px">Copy Tất Cả</button>';html+='</div>';document.getElementById('createResult').innerHTML=html;refreshData();btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Để trống tiền tố để tạo key random dài (32 ký tự).'}else{showToast(r.message,'error');btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Để trống tiền tố để tạo key random dài (32 ký tự).'}}).catch(()=>{showToast('Lỗi tạo key','error');btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Để trống tiền tố để tạo key random dài (32 ký tự).'})}else{const p=document.getElementById('createProductIdManual').value,mk=document.getElementById('createManualKey').value.trim(),d=document.getElementById('createManualDays').value,md=document.getElementById('createManualMaxDevices').value,t=document.getElementById('createManualType').value,u=document.getElementById('createManualUser').value.trim();if(!p)return showToast('Chưa chọn product','error');if(!mk)return showToast('Nhập key','error');if(!u)return showToast('Vui lòng nhập người dùng','error');btn.disabled=true;btn.textContent='Đang tạo...';hint.textContent='Đang tạo key...';const body={product_id:parseInt(p),custom_key:mk,days:parseInt(d)||30,max_devices:parseInt(md)||1,type:t,user:u};api('/api/keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{if(r.success){document.getElementById('createResult').innerHTML='<div style="background:#0e0e12;padding:14px;border-radius:6px;border:1px solid #cc333366;margin-top:10px"><div style="color:#cc3333;font-weight:600;margin-bottom:6px">Key mới đã tạo:</div><span class="copy-field">'+r.data.key+'</span></div>';refreshData();btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Chỉ tạo được 1 key ở chế độ nhập tay.'}else{showToast(r.message,'error');btn.disabled=false;btn.textContent='Tạo Key';hint.textContent='Chỉ tạo được 1 key ở chế độ nhập tay.'}}).catch(()=>{showToast('Lỗi tạo key','error');btn.disabled=false;btn.textContent='Tao Key';hint.textContent='Chi tao duoc 1 key o che do nhap tay.'})}}
 function copyKey(k){navigator.clipboard.writeText(k).then(()=>showToast('Đã copy: '+k,'success'))}
 function copyAllKeys(){const r=document.querySelectorAll('#createResult .copy-field');const t=Array.from(r).map(e=>e.textContent).join('\\n');navigator.clipboard.writeText(t).then(()=>showToast('Đã copy tất cả key','success'))}
 let editKeyData=null;
