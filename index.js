@@ -27,6 +27,7 @@ const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(cors({ origin: corsOrigin, methods: ['GET', 'POST', 'DELETE', 'OPTIONS'] }));
 app.use(express.json());
 app.set('trust proxy', true);           // lấy IP thật từ Render LB
+app.get('/favicon.ico', (req, res) => res.status(204).end()); // Bỏ qua lỗi 404 favicon
 
 // ---- Supabase client ----
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -1101,6 +1102,7 @@ app.get(['/', '/web'], (req, res) => {
           <div class="form-row">
             <div class="form-group" style="flex: 1;"><label>Duration</label><input type="number" id="cmDays" value="30" min="1"></div>
             <div class="form-group" style="flex: 1;"><label>Devices</label><input type="number" id="cmDevices" value="1" min="0" placeholder="0 = unlim"></div>
+          </div>
         </div>
 
         <button class="btn btn-primary" style="width: 100%; padding: 16px; margin-top: 16px; font-size: 16px;" onclick="executeCreateKey()" id="btnCreate"><i data-feather="zap"></i> EXECUTE BUILD</button>
