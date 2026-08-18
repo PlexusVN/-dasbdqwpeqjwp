@@ -162,6 +162,38 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// ---- Enterprise Auto-Cleanup ----
+async function cleanupExpiredKeys() {
+  try {
+    // Lấy thời điểm 24 giờ trước
+    const cutoffDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    
+    // Xóa các key có expires_at nhỏ hơn cutoffDate
+    const { data, error, count } = await supabase
+      .from('keys')
+      .delete({ count: 'exact' })
+      .lt('expires_at', cutoffDate);
+      
+    if (error) throw error;
+    if (count > 0) {
+      console.log(`[Auto-Cleanup] Deleted ${count} expired keys (older than 24h).`);
+      await supabase.from('activity_log').insert({ 
+        action: 'auto_cleanup', 
+        key: 'SYSTEM', 
+        detail: `Auto deleted ${count} keys expired over 24h`,
+        ip: '127.0.0.1'
+      });
+    }
+  } catch (err) {
+    console.error('[Auto-Cleanup] Error:', err.message);
+  }
+}
+
+// Chạy dọn dẹp ngay khi khởi động Server
+cleanupExpiredKeys();
+// Lên lịch dọn dẹp mỗi 1 giờ (3600000 ms)
+setInterval(cleanupExpiredKeys, 3600000);
+
 // ---- Sub-Admins Management (MASTER ONLY) ----
 app.get('/api/subadmins', requireAdmin, async (req, res) => {
   if (req.adminRole !== 'master') return res.status(403).json({ success: false, message: 'Forbidden' });
@@ -665,7 +697,7 @@ app.get(['/', '/web'], (req, res) => {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>PLEXUS AUTH - Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -959,8 +991,12 @@ app.get(['/', '/web'], (req, res) => {
     .modal-footer button { width: 100%; margin: 0; }
     
     /* Mobile Menu Override */
-    .mobile-menu-btn { display: inline-flex; align-items: center; justify-content: center; }
-    .brand { justify-content: flex-start; gap: 12px; }
+    .mobile-menu-btn { 
+      display: inline-flex; align-items: center; justify-content: center; 
+      padding: 12px; margin-left: -8px; border-radius: 8px;
+    }
+    .mobile-menu-btn:active { background: rgba(0,0,0,0.1); }
+    .brand { justify-content: flex-start; gap: 8px; }
     .mobile-menu-overlay { 
       position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
       background: rgba(0,0,0,0.5); z-index: 9999; 
