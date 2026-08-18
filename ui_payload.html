@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>PLEXUS AUTH - Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -262,7 +262,7 @@
     .card { padding: 16px; }
     
     /* Topbar & Header */
-    .topbar-header { flex-direction: column; align-items: stretch; gap: 16px; padding: 16px; }
+    .topbar-header { flex-direction: column; align-items: stretch; gap: 16px; padding: 16px; padding-top: calc(env(safe-area-inset-top, 0px) + 16px); }
     .brand { justify-content: center; }
     .topbar-header > div:last-child { flex-direction: column; align-items: stretch; gap: 12px; width: 100%; }
     .search-bar { width: 100%; justify-content: flex-start; }
@@ -296,8 +296,12 @@
     .modal-footer button { width: 100%; margin: 0; }
     
     /* Mobile Menu Override */
-    .mobile-menu-btn { display: inline-flex; align-items: center; justify-content: center; }
-    .brand { justify-content: flex-start; gap: 12px; }
+    .mobile-menu-btn { 
+      display: inline-flex; align-items: center; justify-content: center; 
+      padding: 12px; margin-left: -8px; border-radius: 8px;
+    }
+    .mobile-menu-btn:active { background: rgba(0,0,0,0.1); }
+    .brand { justify-content: flex-start; gap: 8px; }
     .mobile-menu-overlay { 
       position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
       background: rgba(0,0,0,0.5); z-index: 9999; 
@@ -330,16 +334,16 @@
   <div class="login-box">
     <h2><i data-feather="terminal"></i> PLEXUS AUTH</h2>
     <div class="form-group">
-      <label>Username</label>
+      <label>Tên đăng nhập</label>
       <input type="text" id="loginUser" placeholder="admin" onkeydown="if(event.key==='Enter') login()">
     </div>
     <div class="form-group">
-      <label>Password</label>
+      <label>Mật khẩu</label>
       <input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter') login()">
     </div>
-    <button class="btn btn-primary" style="width: 100%; margin-top: 8px; padding: 14px;" onclick="login()">SIGN IN</button>
+    <button class="btn btn-primary" style="width: 100%; margin-top: 8px; padding: 14px;" onclick="login()">ĐĂNG NHẬP</button>
     <div style="text-align: center; margin-top: 24px;">
-      <button class="btn btn-sm" onclick="checkHealth()"><i data-feather="activity"></i> SERVER STATUS</button>
+      <button class="btn btn-sm" onclick="checkHealth()"><i data-feather="activity"></i> TRẠNG THÁI MÁY CHỦ</button>
     </div>
   </div>
 </div>
@@ -354,22 +358,22 @@
     <div style="display: flex; align-items: center; gap: 24px;">
       <div class="search-bar">
         <i data-feather="search"></i>
-        <input type="text" id="globalSearch" placeholder="Search keys, users..." oninput="debounceSearch()" onkeydown="if(event.key==='Enter') debounceSearch()">
+        <input type="text" id="globalSearch" placeholder="Tìm kiếm key, người dùng..." oninput="debounceSearch()" onkeydown="if(event.key==='Enter') debounceSearch()">
       </div>
-      <span style="font-weight: 600; font-size: 14px;" id="lastRefresh">AUTO-SYNCING</span>
-      <button class="btn btn-sm btn-danger hide-on-mobile" onclick="logout()"><i data-feather="log-out"></i> EXIT</button>
+      <span style="font-weight: 600; font-size: 14px;" id="lastRefresh">ĐỒNG BỘ TỰ ĐỘNG</span>
+      <button class="btn btn-sm btn-danger hide-on-mobile" onclick="logout()"><i data-feather="log-out"></i> THOÁT</button>
     </div>
   </div>
   <div class="mobile-menu-overlay" id="mobileOverlay" onclick="toggleMobileMenu()"></div>
   <div class="tabs-container" id="mobileTabs">
-    <div class="tab-item active" onclick="nav('dashboard')"><i data-feather="grid"></i> Dashboard</div>
-    <div class="tab-item" onclick="nav('keys')"><i data-feather="key"></i> Keys Manager</div>
-    <div class="tab-item" onclick="nav('create')"><i data-feather="plus-square"></i> Create Keys</div>
-    <div class="tab-item" onclick="nav('online')"><i data-feather="radio"></i> Online Users</div>
-    <div class="tab-item" onclick="nav('products')"><i data-feather="package"></i> Products</div>
-    <div class="tab-item" onclick="nav('logs')"><i data-feather="list"></i> Logs</div>
-    <div class="tab-item admin-only" onclick="nav('subadmins')"><i data-feather="users"></i> Sub-Admins</div>
-    <div class="tab-item show-on-mobile" onclick="logout()" style="color: var(--danger); font-weight: 700; border-top: 1px solid #e5e7eb; border-bottom: 2px solid transparent; margin-top: 12px;"><i data-feather="log-out"></i> Exit System</div>
+    <div class="tab-item active" onclick="nav('dashboard')"><i data-feather="grid"></i> Trang chủ</div>
+    <div class="tab-item" onclick="nav('keys')"><i data-feather="key"></i> Quản lý Key</div>
+    <div class="tab-item" onclick="nav('create')"><i data-feather="plus-square"></i> Tạo Key</div>
+    <div class="tab-item" onclick="nav('online')"><i data-feather="radio"></i> Người dùng Online</div>
+    <div class="tab-item" onclick="nav('products')"><i data-feather="package"></i> Sản phẩm</div>
+    <div class="tab-item" onclick="nav('logs')"><i data-feather="list"></i> Nhật ký</div>
+    <div class="tab-item admin-only" onclick="nav('subadmins')"><i data-feather="users"></i> Cấp dưới (Sub-Admin)</div>
+    <div class="tab-item show-on-mobile" onclick="logout()" style="color: var(--danger); font-weight: 700; border-top: 1px solid #e5e7eb; border-bottom: 2px solid transparent; margin-top: 12px;"><i data-feather="log-out"></i> Thoát hệ thống</div>
   </div>
 </header>
 
@@ -379,15 +383,15 @@
   <!-- DASHBOARD -->
   <div id="sec-dashboard" class="section active">
     <div class="section-header">
-      <h2 class="section-title">System Overview</h2>
+      <h2 class="section-title">Tổng quan hệ thống</h2>
     </div>
     <div class="grid-4">
       <div class="card kpi-card">
-        <div class="kpi-label">Total Keys <i data-feather="key"></i></div>
+        <div class="kpi-label">Tổng số Key <i data-feather="key"></i></div>
         <div class="kpi-value" id="kpiTotal">-</div>
       </div>
       <div class="card kpi-card">
-        <div class="kpi-label">Active Keys <i data-feather="check-circle"></i></div>
+        <div class="kpi-label">Key đang hoạt động <i data-feather="check-circle"></i></div>
         <div class="kpi-value" id="kpiActive" style="color: var(--success);">-</div>
       </div>
       <div class="card kpi-card">
@@ -416,27 +420,27 @@
     <div class="section-header">
       <h2 class="section-title">Keys Manager</h2>
       <div class="toolbar-actions">
-        <button class="btn btn-success" onclick="exportCSV()"><i data-feather="download"></i> Export CSV</button>
-        <button class="btn btn-primary" onclick="nav('create')"><i data-feather="plus"></i> Generate</button>
+        <button class="btn btn-success" onclick="exportCSV()"><i data-feather="download"></i> Xuất CSV</button>
+        <button class="btn btn-primary" onclick="nav('create')"><i data-feather="plus"></i> Tạo mới</button>
       </div>
     </div>
     <div class="toolbar">
       <div class="toolbar-filters">
         <select id="filterProduct" onchange="renderKeysTable()">
-          <option value="">All Products</option>
+          <option value="">Tất cả sản phẩm</option>
         </select>
         <select id="filterStatus" onchange="renderKeysTable()">
-          <option value="">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="pending">Pending</option>
-          <option value="expired">Expired</option>
-          <option value="banned">Banned</option>
+          <option value="">Tất cả trạng thái</option>
+          <option value="active">Đang hoạt động</option>
+          <option value="pending">Chờ sử dụng</option>
+          <option value="expired">Đã hết hạn</option>
+          <option value="banned">Đã bị cấm</option>
         </select>
       </div>
       <div class="toolbar-actions" id="bulkActions" style="display: none;">
         <span style="font-size: 14px; font-weight: 700; align-self: center;" id="bulkCount">0 selected</span>
-        <button class="btn btn-danger" onclick="bulkAction('ban')"><i data-feather="slash"></i> Ban All</button>
-        <button class="btn btn-danger" onclick="bulkAction('delete')"><i data-feather="trash"></i> Delete All</button>
+        <button class="btn btn-danger" onclick="bulkAction('ban')"><i data-feather="slash"></i> Cấm tất cả</button>
+        <button class="btn btn-danger" onclick="bulkAction('delete')"><i data-feather="trash"></i> Xóa tất cả</button>
       </div>
     </div>
     <div class="table-container">
@@ -444,26 +448,26 @@
         <thead>
           <tr>
             <th style="width: 40px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
-            <th>KEY</th>
-            <th>PRODUCT</th>
-            <th>TYPE</th>
-            <th>STATUS</th>
-            <th>USER</th>
-            <th>DEVICES</th>
-            <th>EXPIRY</th>
-            <th style="text-align: right;">ACTIONS</th>
+            <th>MÃ KEY</th>
+            <th>SẢN PHẨM</th>
+            <th>LOẠI</th>
+            <th>TRẠNG THÁI</th>
+            <th>NGƯỜI TẠO</th>
+            <th>THIẾT BỊ</th>
+            <th>HẾT HẠN</th>
+            <th style="text-align: right;">THAO TÁC</th>
           </tr>
         </thead>
         <tbody id="keysTableBody">
-          <tr><td colspan="9" style="text-align: center; padding: 40px; font-weight: 600;">LOADING DATA...</td></tr>
+          <tr><td colspan="9" style="text-align: center; padding: 40px; font-weight: 600;">ĐANG TẢI DỮ LIỆU...</td></tr>
         </tbody>
       </table>
     </div>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; font-weight: 600;">
-      <span id="pageInfo">Showing 0 keys</span>
+      <span id="pageInfo">Đang hiển thị 0 key</span>
       <div style="display: flex; gap: 12px;">
-        <button class="btn btn-sm" onclick="changePage(-1)">PREV PAGE</button>
-        <button class="btn btn-sm" onclick="changePage(1)">NEXT PAGE</button>
+        <button class="btn btn-sm" onclick="changePage(-1)">TRANG TRƯỚC</button>
+        <button class="btn btn-sm" onclick="changePage(1)">TRANG SAU</button>
       </div>
     </div>
   </div>
@@ -471,61 +475,61 @@
   <!-- CREATE KEYS -->
   <div id="sec-create" class="section">
     <div class="section-header">
-      <h2 class="section-title">Create New Keys</h2>
+      <h2 class="section-title">Tạo Key mới</h2>
     </div>
     <div class="grid-2">
       <div class="card">
         <div style="display: flex; gap: 24px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #000;">
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700;">
-            <input type="radio" name="createMode" value="auto" checked onchange="toggleCreateMode()"> GENERATOR
+            <input type="radio" name="createMode" value="auto" checked onchange="toggleCreateMode()"> TẠO TỰ ĐỘNG
           </label>
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700;">
-            <input type="radio" name="createMode" value="manual" onchange="toggleCreateMode()"> MANUAL
+            <input type="radio" name="createMode" value="manual" onchange="toggleCreateMode()"> TẠO THỦ CÔNG
           </label>
         </div>
 
         <div id="createAutoForm" onkeydown="if(event.key==='Enter') executeCreateKey()">
           <div class="form-row">
-            <div class="form-group" style="flex: 1;"><label>Product</label><select id="cProduct"></select></div>
-            <div class="form-group" style="flex: 1;"><label>Key Type</label><select id="cType"><option value="basic">Basic</option><option value="pro">Pro</option><option value="vip">VIP</option></select></div>
+            <div class="form-group" style="flex: 1;"><label>Sản phẩm</label><select id="cProduct"></select></div>
+            <div class="form-group" style="flex: 1;"><label>Loại Key</label><select id="cType"><option value="basic">Basic</option><option value="pro">Pro</option><option value="vip">VIP</option></select></div>
           </div>
           <div class="form-row">
-            <div class="form-group" style="flex: 1;"><label>Prefix</label><input type="text" id="cPrefix" placeholder="PLX" value="PLX" style="text-transform: uppercase;"></div>
-            <div class="form-group" style="flex: 1;"><label>Suffix Blocks</label><select id="cSuffix"><option value="8">2 Blocks</option><option value="12" selected>3 Blocks</option><option value="16">4 Blocks</option><option value="24">6 Blocks</option></select></div>
+            <div class="form-group" style="flex: 1;"><label>Tiền tố</label><input type="text" id="cPrefix" placeholder="PLX" value="PLX" style="text-transform: uppercase;"></div>
+            <div class="form-group" style="flex: 1;"><label>Độ dài (Blocks)</label><select id="cSuffix"><option value="8">2 Blocks</option><option value="12" selected>3 Blocks</option><option value="16">4 Blocks</option><option value="24">6 Blocks</option></select></div>
           </div>
           <div class="form-row">
-            <div class="form-group" style="flex: 1;"><label>Duration (Days)</label><input type="number" id="cDays" value="30" min="1"></div>
+            <div class="form-group" style="flex: 1;"><label>Thời hạn (Ngày)</label><input type="number" id="cDays" value="30" min="1"></div>
             <div class="form-group" style="flex: 1;">
-              <label>Max Devices</label>
+              <label>Thiết bị tối đa</label>
               <div style="display: flex; align-items: center; gap: 12px;">
                 <input type="number" id="cDevices" value="1" min="0">
-                <label style="margin: 0; display: flex; align-items: center; white-space: nowrap;"><input type="checkbox" id="cUnlimited" onchange="if(this.checked){document.getElementById('cDevices').value=0;document.getElementById('cDevices').disabled=true}else{document.getElementById('cDevices').disabled=false;document.getElementById('cDevices').value=1}"> UNLIM</label>
+                <label style="margin: 0; display: flex; align-items: center; white-space: nowrap;"><input type="checkbox" id="cUnlimited" onchange="if(this.checked){document.getElementById('cDevices').value=0;document.getElementById('cDevices').disabled=true}else{document.getElementById('cDevices').disabled=false;document.getElementById('cDevices').value=1}"> KHÔNG GIỚI HẠN</label>
               </div>
             </div>
           </div>
-          <div class="form-group"><label>Quantity</label><input type="number" id="cCount" value="1" min="1" max="500"></div>
-          <div class="form-group"><label>Note</label><input type="text" id="cNote" placeholder="Optional context"></div>
+          <div class="form-group"><label>Số lượng</label><input type="number" id="cCount" value="1" min="1" max="500"></div>
+          <div class="form-group"><label>Ghi chú</label><input type="text" id="cNote" placeholder="Ghi chú thêm..."></div>
         </div>
 
         <div id="createManualForm" style="display: none;" onkeydown="if(event.key==='Enter') executeCreateKey()">
            <div class="form-row">
-            <div class="form-group" style="flex: 1;"><label>Product</label><select id="cmProduct"></select></div>
-            <div class="form-group" style="flex: 1;"><label>Key Type</label><select id="cmType"><option value="basic">Basic</option><option value="pro">Pro</option><option value="vip">VIP</option></select></div>
+            <div class="form-group" style="flex: 1;"><label>Sản phẩm</label><select id="cmProduct"></select></div>
+            <div class="form-group" style="flex: 1;"><label>Loại Key</label><select id="cmType"><option value="basic">Basic</option><option value="pro">Pro</option><option value="vip">VIP</option></select></div>
           </div>
-          <div class="form-group"><label>Custom Key String</label><input type="text" id="cmKey" placeholder="Enter custom key..." class="mono"></div>
+          <div class="form-group"><label>Nhập Key tùy chỉnh</label><input type="text" id="cmKey" placeholder="Nhập mã key..." class="mono"></div>
           <div class="form-row">
             <div class="form-group" style="flex: 1;"><label>Duration</label><input type="number" id="cmDays" value="30" min="1"></div>
             <div class="form-group" style="flex: 1;"><label>Devices</label><input type="number" id="cmDevices" value="1" min="0" placeholder="0 = unlim"></div>
           </div>
         </div>
 
-        <button class="btn btn-primary" style="width: 100%; padding: 16px; margin-top: 16px; font-size: 16px;" onclick="executeCreateKey()" id="btnCreate"><i data-feather="zap"></i> EXECUTE BUILD</button>
+        <button class="btn btn-primary" style="width: 100%; padding: 16px; margin-top: 16px; font-size: 16px;" onclick="executeCreateKey()" id="btnCreate"><i data-feather="zap"></i> TIẾN HÀNH TẠO KEY</button>
       </div>
 
       <div class="card" style="display: flex; flex-direction: column;">
-        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; text-transform: uppercase;">Output Console</h3>
+        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; text-transform: uppercase;">Bảng điều khiển</h3>
         <div id="createResultBox" style="flex: 1; background: #000; color: #0f0; border: 2px solid #000; padding: 20px; overflow-y: auto; font-family: var(--font-mono); font-size: 14px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
-          > SYSTEM READY...
+          > HỆ THỐNG ĐÃ SẴN SÀNG...
         </div>
         <button class="btn" style="margin-top: 16px; display: none; background: #e5e7eb;" id="btnCopyResult" onclick="copyResultKeys()"><i data-feather="copy"></i> COPY TO CLIPBOARD</button>
       </div>
@@ -537,7 +541,7 @@
       <div class="table-container">
         <table>
           <thead>
-            <tr><th>Time</th><th>Creator</th><th>Product</th><th>Type</th><th>Keys Generated</th></tr>
+            <tr><th>Time</th><th>Creator</th><th>Sản phẩm</th><th>Type</th><th>Keys Generated</th></tr>
           </thead>
           <tbody id="createHistoryTableBody"></tbody>
         </table>
@@ -553,7 +557,7 @@
     <div class="table-container">
       <table>
         <thead>
-          <tr><th>KEY</th><th>PRODUCT</th><th>TYPE</th><th>HWID</th><th>USER</th><th>LAST SEEN</th></tr>
+          <tr><th>MÃ KEY</th><th>SẢN PHẨM</th><th>LOẠI</th><th>MÃ PHẦN CỨNG</th><th>NGƯỜI TẠO</th><th>LAST SEEN</th></tr>
         </thead>
         <tbody id="onlineTableBody"></tbody>
       </table>
@@ -575,7 +579,7 @@
     </div>
     <div class="table-container">
       <table>
-        <thead><tr><th>ID</th><th>NAME</th><th>SECRET</th><th>CREATED</th><th style="text-align: right;">ACTIONS</th></tr></thead>
+        <thead><tr><th>ID</th><th>NAME</th><th>SECRET</th><th>CREATED</th><th style="text-align: right;">THAO TÁC</th></tr></thead>
         <tbody id="productsTableBody"></tbody>
       </table>
     </div>
@@ -588,7 +592,7 @@
     </div>
     <div class="table-container">
       <table>
-        <thead><tr><th>TIMESTAMP</th><th>ACTION</th><th>TARGET KEY</th><th>DETAILS</th></tr></thead>
+        <thead><tr><th>TIMESTAMP</th><th>HÀNH ĐỘNG</th><th>TARGET KEY</th><th>DETAILS</th></tr></thead>
         <tbody id="logsTableBody"></tbody>
       </table>
     </div>
@@ -597,18 +601,18 @@
   <!-- SUB-ADMINS -->
   <div id="sec-subadmins" class="section admin-only">
     <div class="section-header">
-      <h2 class="section-title">Local Operators</h2>
+      <h2 class="section-title">Tài khoản cấp dưới</h2>
     </div>
     <div class="card" style="margin-bottom: 32px; max-width: 700px;">
       <div class="form-row" style="margin: 0; align-items: flex-end;" onkeydown="if(event.key==='Enter') addSubAdmin()">
-        <div class="form-group" style="margin: 0; flex: 1;"><label>Username</label><input type="text" id="saUser" placeholder="admin2"></div>
-        <div class="form-group" style="margin: 0; flex: 1;"><label>Password</label><input type="password" id="saPass" placeholder="••••••••"></div>
-        <button class="btn btn-primary" onclick="addSubAdmin()" style="height: 44px; padding: 0 24px;"><i data-feather="user-plus"></i> ADD OPERATOR</button>
+        <div class="form-group" style="margin: 0; flex: 1;"><label>Tên đăng nhập</label><input type="text" id="saUser" placeholder="admin2"></div>
+        <div class="form-group" style="margin: 0; flex: 1;"><label>Mật khẩu</label><input type="password" id="saPass" placeholder="••••••••"></div>
+        <button class="btn btn-primary" onclick="addSubAdmin()" style="height: 44px; padding: 0 24px;"><i data-feather="user-plus"></i> THÊM TÀI KHOẢN</button>
       </div>
     </div>
     <div class="table-container" style="max-width: 700px;">
       <table>
-        <thead><tr><th>USERNAME</th><th>ROLE</th><th style="text-align: right;">ACTIONS</th></tr></thead>
+        <thead><tr><th>TÊN TÀI KHOẢN</th><th>CHỨC VỤ</th><th style="text-align: right;">THAO TÁC</th></tr></thead>
         <tbody id="subAdminsTableBody"></tbody>
       </table>
     </div>
@@ -629,11 +633,11 @@
       </div>
       <div class="grid-2">
         <div class="form-group"><label>Status</label><div id="emStatus" class="badge"></div></div>
-        <div class="form-group"><label>Product</label><div id="emProduct" style="font-weight: 700; font-size: 18px;">-</div></div>
+        <div class="form-group"><label>Sản phẩm</label><div id="emProduct" style="font-weight: 700; font-size: 18px;">-</div></div>
         <div class="form-group"><label>Type</label>
           <select id="emType"><option value="basic">Basic</option><option value="pro">Pro</option><option value="vip">VIP</option></select>
         </div>
-        <div class="form-group"><label>Max Devices</label>
+        <div class="form-group"><label>Thiết bị tối đa</label>
           <input type="number" id="emDevices" min="0">
         </div>
         <div class="form-group" style="grid-column: span 2;"><label>User Name</label><input type="text" id="emUser" disabled style="background: #f3f4f6; cursor: not-allowed;"></div>
@@ -702,51 +706,36 @@
     const p = document.getElementById('loginPass').value.trim();
     if(!u || !p) return showToast('Vui lòng nhập tài khoản và mật khẩu', 'warning');
     
-    let subs = JSON.parse(localStorage.getItem('rox_subs') || '[]');
-    let sub = subs.find(x => x.u === u && x.p === p);
-    
     try {
-      // Encode password an toàn cho tiếng Việt/Kí tự đặc biệt
       token = btoa(unescape(encodeURIComponent(u + ':' + p)));
     } catch(e) {
       return showToast('Mật khẩu chứa kí tự không hợp lệ', 'error');
     }
 
-    if (sub) {
-      const masterToken = localStorage.getItem('rox_master_token');
-      if (masterToken) {
-        token = masterToken;
-        document.getElementById('loginOverlay').style.display = 'none';
-        isSubAdmin = true;
-        currentAdminName = sub.u;
-        initApp();
-        showToast('Đã cấp quyền truy cập Operator', 'success');
-        return;
-      } else {
-        return showToast('Sub-admin cần Master login ít nhất 1 lần để lưu mã', 'warning');
-      }
-    }
-
     try {
-      // Test Auth bằng cách gọi API, nếu sai Auth sẽ trả về 401 ngay lập tức.
       const r = await fetch(API + '/health', { headers: { 'Authorization': 'Basic ' + token } });
       
       if (r.status === 401) {
-        throw new Error('Sai tài khoản hoặc mật khẩu (Unauthorized)');
+        throw new Error('Sai tài khoản hoặc mật khẩu');
       }
 
-      // Nếu HTTP status KHÔNG phải 401 (nghĩa là 200 hoặc 500 do Database chưa Setup)
-      // -> Nghĩa là mật khẩu ĐÃ ĐÚNG. Chúng ta vẫn cho Login vào để xem bảng lỗi (nếu có).
+      const j = await r.json();
+      
       document.getElementById('loginOverlay').style.display = 'none';
-      isSubAdmin = false;
-      currentAdminName = "MASTER";
+      if (j.role === 'subadmin') {
+        isSubAdmin = true;
+        currentAdminName = j.user;
+        showToast('Đăng nhập Sub-Admin thành công', 'success');
+      } else {
+        isSubAdmin = false;
+        currentAdminName = j.user || "MASTER";
+        showToast('Đăng nhập thành công', 'success');
+      }
+      
       initApp();
       
-      const j = await r.json();
       if (!j.success || j.supabase === 'error') {
-         showToast('Cảnh báo: Server chưa kết nối được Database! Vui lòng thiết lập biến môi trường.', 'warning');
-      } else {
-         showToast('Đăng nhập thành công', 'success');
+         showToast('Cảnh báo: Server chưa kết nối được Database!', 'warning');
       }
       
     } catch(e) {
@@ -1094,7 +1083,7 @@
       refreshAll();
     } catch(e) { showToast(e.message, 'error'); }
     
-    btn.disabled = false; btn.innerHTML = '<i data-feather="zap"></i> EXECUTE BUILD'; feather.replace();
+    btn.disabled = false; btn.innerHTML = '<i data-feather="zap"></i> TIẾN HÀNH TẠO KEY'; feather.replace();
   }
   function copyResultKeys() { copy(generatedKeys.join('\\n')); }
 
@@ -1167,7 +1156,7 @@
     if (!tbody) return;
     const createLogs = dataStore.logs.filter(l => l.action === 'create').slice(0, 50);
     if (!createLogs.length) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; font-weight: 700;">NO HISTORY</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; font-weight: 700;">CHƯA CÓ LỊCH SỬ</td></tr>';
       return;
     }
     const pMap = {}; dataStore.products.forEach(x => pMap[x.id] = x.name);
@@ -1208,7 +1197,7 @@
   }
   function renderLogs() {
     const tbody = document.getElementById('logsTableBody');
-    if(!dataStore.logs.length) { tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 40px; font-weight: 700;">NO LOGS</td></tr>`; return; }
+    if(!dataStore.logs.length) { tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 40px; font-weight: 700;">KHÔNG CÓ NHẬT KÝ</td></tr>`; return; }
     tbody.innerHTML = dataStore.logs.slice(0, 100).map(l => `<tr>
       <td class="mono text-muted">${new Date(l.created_at).toLocaleString()}</td>
       <td style="color: var(--accent); font-weight: 700; text-transform: uppercase;">${l.action}</td>
@@ -1218,7 +1207,7 @@
   }
   function renderProducts() {
     const tbody = document.getElementById('productsTableBody');
-    if(!dataStore.products.length) { tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 40px; font-weight: 700;">NO PRODUCTS</td></tr>`; return; }
+    if(!dataStore.products.length) { tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 40px; font-weight: 700;">CHƯA CÓ SẢN PHẨM</td></tr>`; return; }
     tbody.innerHTML = dataStore.products.map(p => `<tr>
       <td class="mono text-muted">${p.id}</td>
       <td style="font-weight: 700; text-transform: uppercase;">${p.name}</td>
@@ -1251,34 +1240,69 @@
   }
 
   // --- Sub Admins (Local) ---
-  function renderSubAdmins() {
-    let subs = JSON.parse(localStorage.getItem('rox_subs') || '[]');
+  
+  async function renderSubAdmins() {
     const tbody = document.getElementById('subAdminsTableBody');
-    if(!subs.length) { tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 40px; font-weight: 700;">NO OPERATORS</td></tr>`; return; }
-    tbody.innerHTML = subs.map((s, i) => `<tr>
-      <td style="font-weight: 700;">${s.u}</td>
-      <td><span class="badge badge-active">FULL ACCESS</span></td>
-      <td style="text-align: right;"><button class="btn-icon text-danger admin-only" onclick="delSubAdmin(${i})"><i data-feather="trash"></i></button></td>
-    </tr>`).join('');
-    feather.replace();
+    if(isSubAdmin) return;
+    try {
+      const res = await fetch(API + '/subadmins', { headers: { 'Authorization': 'Basic ' + token } });
+      const data = await res.json();
+      if(!data.success || !data.data.length) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; font-weight: 700;">CHƯA CÓ TÀI KHOẢN CẤP DƯỚI</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.data.map((s) => '<tr>' +
+        '<td style="font-weight: 700;">' + s.username + '</td>' +
+        '<td><span class="badge badge-active">FULL ACCESS</span></td>' +
+        '<td style="text-align: right;"><button class="btn-icon text-danger admin-only" onclick="delSubAdmin(\'' + s.username + '\')"><i data-feather="trash"></i></button></td>' +
+      '</tr>').join('');
+      feather.replace();
+    } catch(e) {
+      console.error(e);
+    }
   }
-  function addSubAdmin() {
-    if(isSubAdmin) return showToast('No permission', 'error');
+
+  async function addSubAdmin() {
+    if(isSubAdmin) return showToast('Không có quyền thao tác', 'error');
     const u = document.getElementById('saUser').value.trim();
     const p = document.getElementById('saPass').value.trim();
-    if(!u||!p) return showToast('MISSING FIELDS', 'error');
-    let subs = JSON.parse(localStorage.getItem('rox_subs') || '[]');
-    subs.push({u, p});
-    localStorage.setItem('rox_subs', JSON.stringify(subs));
-    document.getElementById('saUser').value=''; document.getElementById('saPass').value='';
-    renderSubAdmins(); showToast('OPERATOR ADDED');
+    if(!u || !p) return showToast('Vui lòng nhập đủ thông tin', 'error');
+    try {
+      const res = await fetch(API + '/subadmins', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + token },
+        body: JSON.stringify({ username: u, password: p })
+      });
+      const data = await res.json();
+      if(data.success) {
+        document.getElementById('saUser').value = '';
+        document.getElementById('saPass').value = '';
+        renderSubAdmins();
+        showToast(data.message, 'success');
+      } else {
+        showToast(data.message, 'error');
+      }
+    } catch(e) {
+      showToast('Lỗi máy chủ', 'error');
+    }
   }
-  function delSubAdmin(i) {
-    if(isSubAdmin) return showToast('No permission', 'error');
-    let subs = JSON.parse(localStorage.getItem('rox_subs') || '[]');
-    subs.splice(i, 1);
-    localStorage.setItem('rox_subs', JSON.stringify(subs));
-    renderSubAdmins(); showToast('REMOVED');
+
+  async function delSubAdmin(username) {
+    if(isSubAdmin) return showToast('Không có quyền thao tác', 'error');
+    if(!confirm('Xác nhận xóa tài khoản: ' + username + '?')) return;
+    try {
+      const res = await fetch(API + '/subadmins/' + username, {
+        method: 'DELETE', headers: { 'Authorization': 'Basic ' + token }
+      });
+      const data = await res.json();
+      if(data.success) {
+        renderSubAdmins();
+        showToast(data.message, 'success');
+      } else {
+        showToast(data.message, 'error');
+      }
+    } catch(e) {
+      showToast('Lỗi máy chủ', 'error');
+    }
   }
 
 </script>
