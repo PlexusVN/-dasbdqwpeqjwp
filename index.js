@@ -2900,7 +2900,7 @@ app.get('/api/ff/categories', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('game_categories')
-      .select('id, name, icon, sort_order')
+      .select('id, name, icon, image_url, sort_order')
       .eq('is_active', true)
       .order('sort_order', { ascending: true });
     if (error) throw error;
