@@ -2205,15 +2205,14 @@ tr:hover td{background:rgba(59,130,246,.03)}
       <div class="section-title"><i data-feather="file-plus"></i> .3105 File Builder</div>
     </div>
     <div class="section-body">
-      <p style="font-size:13px;color:var(--text3);margin-bottom:16px">Tạo file .3105 trực tiếp trên trình duyệt và tải về. File được mã hóa AES-256-GCM.</p>
+      <p style="font-size:13px;color:var(--text3);margin-bottom:16px">Tạo file .3105 trực tiếp trên trình duyệt. File mã hóa AES-256-GCM, compatible với NovaX app.</p>
       <div class="form-row">
         <div class="form-group"><label>Tên Project</label><input id="bldName" placeholder="My Patch v1"></div>
-        <div class="form-group"><label>Bundle ID (mỗi dòng 1 cái)</label><input id="bldBundle" placeholder="com.example.app"></div>
+        <div class="form-group"><label>Bundle ID</label><input id="bldBundle" placeholder="com.apple.mobile.MobileHouseArrest" value="com.apple.mobile.MobileHouseArrest"></div>
       </div>
-      <div class="form-group"><label>Mô tả (tùy chọn)</label><input id="bldDesc" placeholder="Mô tả patch"></div>
       <div class="form-row">
         <div class="form-group">
-          <label>Password保护 (tùy chọn)</label>
+          <label>Password protect (tùy chọn)</label>
           <input id="bldPass" type="password" placeholder="Để trống = không mã hóa">
           <div class="form-hint">Nếu để trống, file sẽ dùng public key</div>
         </div>
@@ -2226,6 +2225,7 @@ tr:hover td{background:rgba(59,130,246,.03)}
         <label>Replacement Files</label>
         <div class="file-input btn btn-secondary btn-sm"><i data-feather="upload"></i> Chọn files<input type="file" id="bldFiles" multiple></div>
         <span id="bldFilesInfo" style="margin-left:10px;font-size:12px;color:var(--text3)"></span>
+        <div class="form-hint">Mỗi file cần 1 relative path (vd: Documents/file.dylib). Click vào ô Path để sửa.</div>
       </div>
       <div id="bldFileList" style="margin-top:10px"></div>
       <div style="margin-top:20px;display:flex;gap:10px;align-items:center">
@@ -2510,22 +2510,34 @@ document.getElementById('bldFiles').addEventListener('change', function() {
   if (!this.files.length) { info.textContent = ''; list.innerHTML = ''; return; }
   const promises = Array.from(this.files).map(f => new Promise(resolve => {
     const reader = new FileReader();
-    reader.onload = () => { bldFileData.push({ name: f.name, size: f.size, data: new Uint8Array(reader.result) }); resolve(); };
+    reader.onload = () => {
+      bldFileData.push({ name: f.name, size: f.size, data: new Uint8Array(reader.result), relativePath: f.name });
+      resolve();
+    };
     reader.readAsArrayBuffer(f);
   }));
   Promise.all(promises).then(() => {
     info.textContent = bldFileData.length + ' file(s), ' + formatSize(bldFileData.reduce((a,b) => a + b.size, 0));
     list.innerHTML = bldFileData.map((f,i) =>
-      '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:12px">' +
-      '<i data-feather="file" style="width:14px;height:14px;color:var(--accent)"></i>' +
-      '<span style="flex:1;font-family:JetBrains Mono,monospace">' + esc(f.name) + '</span>' +
-      '<span style="color:var(--text3)">' + formatSize(f.size) + '</span>' +
-      '<button class="btn btn-ghost btn-sm" onclick="removeBldFile(' + i + ')" style="color:var(--red);padding:2px"><i data-feather="x" style="width:14px;height:14px"></i></button>' +
+      '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:6px">' +
+      '<i data-feather="file" style="width:14px;height:14px;color:var(--accent);flex-shrink:0"></i>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:12px;font-family:JetBrains Mono,monospace;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(f.name) + '</div>' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">' +
+          '<span style="font-size:11px;color:var(--text3);flex-shrink:0">Path:</span>' +
+          '<input type="text" value="' + esc(f.relativePath) + '" onchange="updateBldPath(' + i + ', this.value)" ' +
+            'style="flex:1;padding:3px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;font-family:JetBrains Mono,monospace;outline:none">' +
+          '<span style="font-size:11px;color:var(--text3)">' + formatSize(f.size) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<button class="btn btn-ghost btn-sm" onclick="removeBldFile(' + i + ')" style="color:var(--red);padding:2px;flex-shrink:0"><i data-feather="x" style="width:14px;height:14px"></i></button>' +
       '</div>'
     ).join('');
     feather.replace();
   });
 });
+
+function updateBldPath(idx, val) { if (bldFileData[idx]) bldFileData[idx].relativePath = val; }
 
 function removeBldFile(idx) {
   bldFileData.splice(idx, 1);
@@ -2715,7 +2727,10 @@ const PLIST = {
 
 // ─── .3105 Crypto Helpers ───
 function bytesToHex(b) { return Array.from(b).map(x => x.toString(16).padStart(2,'0')).join(''); }
-function uuidToBytes(uuid) { return Uint8Array.from(uuid.replace(/-/g,'').match(/.{2}/g).map(x => parseInt(x,16))); }
+
+// Swift Codable Date: seconds since 2001-01-01 00:00:00 UTC
+const APPLE_EPOCH_OFFSET = 978307200;
+function swiftDateNow() { return Date.now() / 1000 - APPLE_EPOCH_OFFSET; }
 
 async function sha256(data) {
   const hash = await crypto.subtle.digest('SHA-256', data);
@@ -2742,7 +2757,6 @@ async function aesGcmEncrypt(key, data, aad) {
 async function buildPackage() {
   const name = document.getElementById('bldName').value.trim();
   const bundleId = document.getElementById('bldBundle').value.trim();
-  const desc = document.getElementById('bldDesc').value.trim();
   const password = document.getElementById('bldPass').value;
   const schemaVersion = parseInt(document.getElementById('bldSchema').value);
   const btn = document.getElementById('bldBtn');
@@ -2751,6 +2765,7 @@ async function buildPackage() {
 
   if (!name) { toast('Nhập tên project', false); return; }
   if (!bundleId) { toast('Nhập Bundle ID', false); return; }
+  if (!bldFileData.length) { toast('Chọn ít nhất 1 file', false); return; }
 
   btn.disabled = true; btn.innerHTML = '<i data-feather="loader"></i> Đang tạo...'; feather.replace();
   status.textContent = 'Đang mã hóa...';
@@ -2758,11 +2773,11 @@ async function buildPackage() {
 
   try {
     const packageID = crypto.randomUUID();
-    const now = new Date();
-    const rules = bldFileData.map((f, i) => ({
+    const now = swiftDateNow();
+    const rules = bldFileData.map((f) => ({
       id: crypto.randomUUID(),
       bundleID: bundleId,
-      relativePath: '/' + f.name,
+      relativePath: f.relativePath || f.name,
       replacementFilename: f.name,
       replacementData: Array.from(f.data)
     }));
@@ -2770,18 +2785,19 @@ async function buildPackage() {
     const project = {
       id: packageID,
       name: name,
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
+      createdAt: now,
+      updatedAt: now,
       bundleIdentifiers: [bundleId],
       directories: [],
       rules: rules
     };
 
-    const payloadObj = { project, replacementDigests: {} };
+    const digests = {};
     for (const r of rules) {
       const digest = await sha256(r.replacementData);
-      payloadObj.replacementDigests[r.id] = Array.from(digest);
+      digests[r.id] = Array.from(digest);
     }
+    const payloadObj = { project: project, replacementDigests: digests };
 
     const payloadPlist = PLIST.encode(payloadObj);
     const contentKeyRaw = crypto.getRandomValues(new Uint8Array(32));
@@ -2793,7 +2809,7 @@ async function buildPackage() {
 
     if (isPasswordProtected) {
       kdfSalt = crypto.getRandomValues(new Uint8Array(16));
-      kdfIterations = 100000;
+      kdfIterations = 250000;
       const wrappingKey = await pbkdf2Derive(password, kdfSalt, kdfIterations);
       const wrapResult = await crypto.subtle.wrapKey('raw', wrappingKey, { name: 'AES-KW' }, contentKeyRaw);
       wrappedContentKey = new Uint8Array(wrapResult);
@@ -2804,16 +2820,17 @@ async function buildPackage() {
     }
 
     status.textContent = 'Đang mã hóa payload...';
-    const aad = new TextEncoder().encode('3105PATCH/v' + schemaVersion + '/payload/' + packageID);
-    const { iv: payloadIv, ciphertext: payloadCipher } = await aesGcmEncrypt(contentKey, payloadPlist, aad);
-    const encryptedPayload = new Uint8Array(payloadIv.length + payloadCipher.length + 16);
+    const payloadAad = new TextEncoder().encode('3105PATCH/v' + schemaVersion + '/payload/' + packageID);
+    const { iv: payloadIv, ciphertext: payloadCipher } = await aesGcmEncrypt(contentKey, payloadPlist, payloadAad);
+    // AES-GCM combined = iv(12) + ciphertext + tag(16)
+    const encryptedPayload = new Uint8Array(payloadIv.length + payloadCipher.length);
     encryptedPayload.set(payloadIv, 0);
     encryptedPayload.set(payloadCipher, payloadIv.length);
 
     const envelope = {
       schemaVersion: schemaVersion,
-      keyADVersion: null,
-      packageID: uuidToBytes(packageID),
+      keyADVersion: isPasswordProtected ? schemaVersion : null,
+      packageID: packageID,
       isPasswordProtected: isPasswordProtected,
       kdfSalt: kdfSalt || null,
       kdfIterations: kdfIterations || null,
@@ -2825,7 +2842,7 @@ async function buildPackage() {
 
     status.textContent = 'Đang đóng gói...';
     const envelopePlist = PLIST.encode(envelope);
-    const magic = new Uint8Array([0x33, 0x31, 0x30, 0x35, 0x50, 0x41, 0x54, 0x43, 0x48, 0x00]); // "3105PATCH\0"
+    const magic = new Uint8Array([0x33, 0x31, 0x30, 0x35, 0x50, 0x41, 0x54, 0x43, 0x48, 0x00]);
     const fileData = new Uint8Array(magic.length + envelopePlist.length);
     fileData.set(magic, 0);
     fileData.set(envelopePlist, magic.length);
@@ -2841,22 +2858,22 @@ async function buildPackage() {
     const hash = bytesToHex(await sha256(fileData));
     preview.style.display = 'block';
     preview.textContent =
-      '✓ File created: ' + a.download + '\\n' +
+      'OK File created: ' + a.download + '\\n' +
       '  Size: ' + formatSize(fileData.length) + '\\n' +
       '  PackageID: ' + packageID + '\\n' +
       '  Schema: v' + schemaVersion + '\\n' +
-      '  Password: ' + (isPasswordProtected ? 'Yes' : 'No (public key)') + '\\n' +
+      '  Password: ' + (isPasswordProtected ? 'Yes (' + kdfIterations + ' iterations)' : 'No (public key)') + '\\n' +
       '  Rules: ' + rules.length + '\\n' +
       '  SHA-256: ' + hash.substring(0, 32) + '...';
 
-    toast('Đã tạo file .3105 thành công!');
+    toast('Da tao file .3105 thanh cong!');
     feather.replace();
   } catch (e) {
-    toast('Lỗi: ' + e.message, false);
+    toast('Loi: ' + e.message, false);
     preview.style.display = 'block';
     preview.textContent = 'ERROR: ' + e.message;
   } finally {
-    btn.disabled = false; btn.innerHTML = '<i data-feather="download"></i> Tạo & Tải .3105'; feather.replace();
+    btn.disabled = false; btn.innerHTML = '<i data-feather="download"></i> Tao & Tai .3105'; feather.replace();
     status.textContent = '';
   }
 }
