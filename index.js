@@ -24,7 +24,7 @@ const PORT = process.env.PORT || 3000;
 
 // ---- CORS (cho phép web PWA gọi cross-origin; có thể set env CORS_ORIGIN để giới hạn domain) ----
 const corsOrigin = process.env.CORS_ORIGIN || '*';
-app.use(cors({ origin: corsOrigin, methods: ['GET', 'POST', 'DELETE', 'OPTIONS'] }));
+app.use(cors({ origin: corsOrigin, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] }));
 app.use(express.json());
 app.set('trust proxy', true);           // lấy IP thật từ Render LB
 app.get('/favicon.ico', (req, res) => res.status(204).end()); // Bỏ qua lỗi 404 favicon
@@ -1174,11 +1174,11 @@ app.get(['/', '/web'], (req, res) => {
     </div>
     <div class="grid-2">
       <div class="card">
-        <div style="display: flex; gap: 24px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #000;">
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700;">
+        <div style="display: flex; gap: 24px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #000; flex-wrap: wrap;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; white-space: nowrap;">
             <input type="radio" name="createMode" value="auto" checked onchange="toggleCreateMode()"> TẠO TỰ ĐỘNG
           </label>
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; white-space: nowrap;">
             <input type="radio" name="createMode" value="manual" onchange="toggleCreateMode()"> TẠO THỦ CÔNG
           </label>
         </div>
@@ -2006,9 +2006,221 @@ app.get(['/', '/web'], (req, res) => {
 `);
 });
 
+// ============================================================
+//  PATCH DISTRIBUTION API (NovaX Features Tab)
+// ============================================================
+
+// ---- PUBLIC: App calls ----
+
+// GET /api/ff/categories — list active categories
+app.get('/api/ff/categories', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('game_categories')
+      .select('id, name, icon, sort_order')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err) {
+    res.json({ success: false, message: 'Failed to load categories' });
+  }
+});
+
+// GET /api/ff/patches?cat=X — list patches for a category
+app.get('/api/ff/patches', async (req, res) => {
+  try {
+    const { cat } = req.query;
+    let query = supabase
+      .from('patches')
+      .select('id, category_id, name, slug, description, image_url, file_url, file_hash, file_size, version')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+    if (cat) query = query.eq('category_id', parseInt(cat));
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err) {
+    res.json({ success: false, message: 'Failed to load patches' });
+  }
+});
+
+// GET /api/ff/sync — full metadata for sync check
+app.get('/api/ff/sync', async (req, res) => {
+  try {
+    const { data: categories, error: catErr } = await supabase
+      .from('game_categories')
+      .select('id, name, icon, sort_order')
+      .eq('is_active', true)
+      .order('sort_order');
+    if (catErr) throw catErr;
+
+    const { data: patches, error: patErr } = await supabase
+      .from('patches')
+      .select('id, category_id, name, slug, description, image_url, file_url, file_hash, file_size, version')
+      .eq('is_active', true)
+      .order('sort_order');
+    if (patErr) throw patErr;
+
+    res.json({ success: true, categories: categories || [], patches: patches || [] });
+  } catch (err) {
+    res.json({ success: false, message: 'Sync failed' });
+  }
+});
+
+// ---- ADMIN: Web admin calls (require Basic Auth) ----
+function requirePatchAdmin(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+  const decoded = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
+  const [user, pass] = decoded.split(':');
+  if (user !== ADMIN_USER || pass !== ADMIN_PASS) {
+    return res.status(401).json({ success: false, message: 'Invalid credentials' });
+  }
+  next();
+}
+
+// GET /api/admin/ff/categories
+app.get('/api/admin/ff/categories', requirePatchAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('game_categories')
+      .select('*')
+      .order('sort_order');
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/admin/ff/categories
+app.post('/api/admin/ff/categories', requirePatchAdmin, async (req, res) => {
+  try {
+    const { name, icon = '', sort_order = 0, is_active = true } = req.body;
+    if (!name) return res.json({ success: false, message: 'Name required' });
+    const { data, error } = await supabase
+      .from('game_categories')
+      .insert({ name, icon, sort_order, is_active })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
+
+// PUT /api/admin/ff/categories/:id
+app.put('/api/admin/ff/categories/:id', requirePatchAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const { data, error } = await supabase
+      .from('game_categories')
+      .update(updates)
+      .eq('id', parseInt(id))
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
+
+// DELETE /api/admin/ff/categories/:id
+app.delete('/api/admin/ff/categories/:id', requirePatchAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('game_categories')
+      .delete()
+      .eq('id', parseInt(id));
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/admin/ff/patches
+app.get('/api/admin/ff/patches', requirePatchAdmin, async (req, res) => {
+  try {
+    const { category_id } = req.query;
+    let query = supabase.from('patches').select('*').order('sort_order');
+    if (category_id) query = query.eq('category_id', parseInt(category_id));
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/admin/ff/patches
+app.post('/api/admin/ff/patches', requirePatchAdmin, async (req, res) => {
+  try {
+    const { category_id, name, description = '', image_url = '', file_url = '', file_hash = '', file_size = 0, sort_order = 0, is_active = true } = req.body;
+    if (!category_id || !name) return res.json({ success: false, message: 'category_id and name required' });
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const { data, error } = await supabase
+      .from('patches')
+      .insert({ category_id, name, slug, description, image_url, file_url, file_hash, file_size, sort_order, is_active, version: 1 })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
+
+// PUT /api/admin/ff/patches/:id
+app.put('/api/admin/ff/patches/:id', requirePatchAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = { ...req.body, updated_at: new Date().toISOString() };
+    if (updates.name && !updates.slug) {
+      updates.slug = updates.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+    if (updates.file_url || updates.file_hash) {
+      updates.version = (updates.version || 0) + 1;
+    }
+    const { data, error } = await supabase
+      .from('patches')
+      .update(updates)
+      .eq('id', parseInt(id))
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
+
+// DELETE /api/admin/ff/patches/:id
+app.delete('/api/admin/ff/patches/:id', requirePatchAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('patches')
+      .delete()
+      .eq('id', parseInt(id));
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
+
 // ======================== START ========================
 app.listen(PORT, () => {
   console.log(`ROX Auth Server running on port ${PORT}`);
   console.log(`Web UI: http://localhost:${PORT}/`);
   console.log(`API:   http://localhost:${PORT}/api/verify?key=xxx&hwid=xxx&secret=xxx`);
+  console.log(`Patch API: http://localhost:${PORT}/api/ff/sync`);
 });
