@@ -2010,7 +2010,7 @@ app.get(['/', '/web'], (req, res) => {
 // ============================================================
 //  PATCH MANAGER - Web Admin Panel
 // ============================================================
-app.get('/admin/patches', requireAdmin, (req, res) => {
+app.get('/admin/patches', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="vi">
 <head>
