@@ -1067,6 +1067,7 @@ app.get(['/', '/web'], (req, res) => {
     <div class="tab-item" onclick="nav('online')"><i data-feather="radio"></i> Người dùng Online</div>
     <div class="tab-item" onclick="nav('products')"><i data-feather="package"></i> Sản phẩm</div>
     <div class="tab-item" onclick="nav('logs')"><i data-feather="list"></i> Nhật ký</div>
+    <div class="tab-item" onclick="window.location.href='/admin/patches'" style="color: #2563eb; font-weight: 600;"><i data-feather="grid"></i> Patches</div>
     <div class="tab-item admin-only" onclick="nav('subadmins')"><i data-feather="users"></i> Cấp dưới (Sub-Admin)</div>
     <div class="tab-item show-on-mobile" onclick="logout()" style="color: var(--danger); font-weight: 700; border-top: 1px solid #e5e7eb; border-bottom: 2px solid transparent; margin-top: 12px;"><i data-feather="log-out"></i> Thoát hệ thống</div>
   </div>
