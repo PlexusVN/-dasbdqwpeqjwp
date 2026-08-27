@@ -2933,7 +2933,7 @@ app.get('/api/ff/sync', async (req, res) => {
   try {
     const { data: categories, error: catErr } = await supabase
       .from('game_categories')
-      .select('id, name, icon, sort_order')
+      .select('id, name, icon, image_url, sort_order')
       .eq('is_active', true)
       .order('sort_order');
     if (catErr) throw catErr;
