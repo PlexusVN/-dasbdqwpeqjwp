@@ -18,6 +18,7 @@
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const crypto = require('crypto'); // <-- Dòng mới thêm vào
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -314,14 +315,21 @@ app.get('/api/verify', async (req, res) => {
       ip: req.ip,
     });
 
+    const resType = rpc.type || 'basic';
+    const resExpires = rpc.expires_at || '';
+    const messageToHash = `true|${resType}|${resExpires}`;
+    const hmac = crypto.createHmac('sha256', secret).update(messageToHash).digest('hex');
+
     res.json({
       success: true,
       status: 'valid',
       message: 'Authentication successful',
       expires_at: rpc.expires_at,
       server_time: new Date().toISOString(),
-      type: rpc.type || 'basic',
+      type: resType,
+      hmac: hmac
     });
+
   } catch (err) {
     // Luôn trả generic, không leak internal error
     res.json({ success: false, status: 'invalid', message: 'Authentication failed' });
