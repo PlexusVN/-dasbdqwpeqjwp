@@ -2018,7 +2018,22 @@ app.get(['/', '/web'], (req, res) => {
 // ============================================================
 //  PATCH MANAGER - Web Admin Panel
 // ============================================================
-app.get('/admin/patches', (req, res) => {
+function requirePatchAdminPage(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Patch Manager"');
+    return res.status(401).send('Unauthorized - Vui long nhap tai khoan Admin');
+  }
+  const decoded = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
+  const [user, pass] = decoded.split(':');
+  if (user !== ADMIN_USER || pass !== ADMIN_PASS) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Patch Manager"');
+    return res.status(401).send('Unauthorized - Chi danh cho Main Admin');
+  }
+  next();
+}
+
+app.get('/admin/patches', requirePatchAdminPage, (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -2939,6 +2954,29 @@ app.get('/api/ff/patches', async (req, res) => {
 // GET /api/ff/sync — full metadata for sync check
 app.get('/api/ff/sync', async (req, res) => {
   try {
+    const authKey = req.headers['x-auth-key'];
+    if (!authKey) {
+      return res.status(401).json({ success: false, message: 'Missing auth key' });
+    }
+
+    const { data: keyData, error: keyErr } = await supabase
+      .from('keys')
+      .select('status, expires_at')
+      .eq('key', authKey)
+      .maybeSingle();
+
+    if (keyErr || !keyData) {
+      return res.status(401).json({ success: false, message: 'Invalid key' });
+    }
+    
+    if (keyData.status !== 'active') {
+      return res.status(403).json({ success: false, message: 'Key is not active' });
+    }
+
+    if (keyData.expires_at && new Date(keyData.expires_at) < new Date()) {
+      return res.status(403).json({ success: false, message: 'Key expired' });
+    }
+
     const { data: categories, error: catErr } = await supabase
       .from('game_categories')
       .select('id, name, icon, image_url, sort_order')
@@ -2953,9 +2991,79 @@ app.get('/api/ff/sync', async (req, res) => {
       .order('sort_order');
     if (patErr) throw patErr;
 
-    res.json({ success: true, categories: categories || [], patches: patches || [] });
+    const finalCategories = categories || [];
+    const finalPatches = patches || [];
+
+    const scheme = req.headers['x-forwarded-proto'] || req.protocol;
+    const proxyPatches = finalPatches.map(p => ({
+      ...p,
+      file_url: p.file_url ? `${scheme}://${req.get('host')}/api/ff/download/${p.slug}` : ''
+    }));
+
+    const messageToHash = `true|${finalCategories.length}|${proxyPatches.length}`;
+    const hmac = require('crypto').createHmac('sha256', authKey).update(messageToHash).digest('base64');
+
+    res.json({ success: true, hmac, categories: finalCategories, patches: proxyPatches });
   } catch (err) {
     res.json({ success: false, message: 'Sync failed' });
+  }
+});
+
+// GET /api/ff/download/:slug — proxy download endpoint
+app.get('/api/ff/download/:slug', async (req, res) => {
+  try {
+    const authKey = req.headers['x-auth-key'];
+    if (!authKey) {
+      return res.status(401).json({ success: false, message: 'Missing auth key' });
+    }
+
+    const { data: keyData, error: keyErr } = await supabase
+      .from('keys')
+      .select('status, expires_at')
+      .eq('key', authKey)
+      .maybeSingle();
+
+    if (keyErr || !keyData) {
+      return res.status(401).json({ success: false, message: 'Invalid key' });
+    }
+    
+    if (keyData.status !== 'active') {
+      return res.status(403).json({ success: false, message: 'Key is not active' });
+    }
+
+    if (keyData.expires_at && new Date(keyData.expires_at) < new Date()) {
+      return res.status(403).json({ success: false, message: 'Key expired' });
+    }
+
+    const { slug } = req.params;
+    const { data: patch, error: patchErr } = await supabase
+      .from('patches')
+      .select('file_url')
+      .eq('slug', slug)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (patchErr || !patch || !patch.file_url) {
+      return res.status(404).json({ success: false, message: 'Patch not found' });
+    }
+
+    const fileResp = await fetch(patch.file_url);
+    if (!fileResp.ok) {
+      return res.status(500).json({ success: false, message: 'Failed to fetch source file' });
+    }
+
+    res.set('Content-Type', 'application/octet-stream');
+    res.set('Content-Disposition', `attachment; filename="${slug}.3105"`);
+
+    const { Readable } = require('stream');
+    if (fileResp.body && fileResp.body.getReader) {
+      Readable.fromWeb(fileResp.body).pipe(res);
+    } else {
+      const buffer = await fileResp.arrayBuffer();
+      res.send(Buffer.from(buffer));
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Download proxy failed' });
   }
 });
 
