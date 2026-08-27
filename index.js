@@ -2017,123 +2017,251 @@ app.get('/admin/patches', (req, res) => {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NovaX Patch Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:w400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/feather-icons"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0f;color:#e0e0e0;min-height:100vh}
-.header{background:linear-gradient(135deg,#0d1117,#161b22);border-bottom:1px solid #21262d;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.header h1{font-size:20px;font-weight:700;background:linear-gradient(90deg,#58a6ff,#79c0ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.header .subtitle{font-size:12px;color:#8b949e;margin-top:2px}
-.nav{display:flex;gap:8px}
-.nav a{color:#8b949e;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .2s}
-.nav a:hover,.nav a.active{color:#fff;background:#21262d}
-.container{max-width:1200px;margin:0 auto;padding:24px}
-.card{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:20px;margin-bottom:16px}
-.card h2{font-size:16px;font-weight:600;margin-bottom:16px;color:#e6edf3;display:flex;align-items:center;gap:8px}
-.card h2 .icon{font-size:18px}
+:root{--bg:#06080d;--bg2:#0c1017;--bg3:#111827;--bg4:#1a2332;--border:#1e293b;--border2:#334155;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--accent:#3b82f6;--accent2:#60a5fa;--accent-glow:rgba(59,130,246,.15);--green:#10b981;--green-bg:rgba(16,185,129,.1);--red:#ef4444;--red-bg:rgba(239,68,68,.1);--yellow:#f59e0b;--yellow-bg:rgba(245,158,11,.1);--purple:#8b5cf6;--purple-bg:rgba(139,92,246,.1)}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+::selection{background:var(--accent);color:#fff}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+.header{background:linear-gradient(180deg,rgba(15,23,42,.95),rgba(6,8,13,.98));border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.header-left{display:flex;align-items:center;gap:16px}
+.logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(59,130,246,.3)}
+.logo i{color:#fff;width:22px;height:22px}
+.header h1{font-size:20px;font-weight:800;letter-spacing:-.5px}
+.header h1 span{background:linear-gradient(135deg,var(--accent2),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .subtitle{font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.5px;text-transform:uppercase;margin-top:2px}
+.nav{display:flex;gap:4px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:4px}
+.nav a{color:var(--text3);text-decoration:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:6px}
+.nav a:hover{color:var(--text);background:var(--bg3)}
+.nav a.active{color:#fff;background:var(--accent);box-shadow:0 0 15px rgba(59,130,246,.3)}
+.nav a i{width:16px;height:16px}
+
+.container{max-width:1400px;margin:0 auto;padding:24px 32px}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;position:relative;overflow:hidden;transition:all .3s}
+.stat:hover{border-color:var(--accent);box-shadow:0 0 30px var(--accent-glow)}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity .3s}
+.stat:hover::before{opacity:1}
+.stat .stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.stat .stat-icon i{width:22px;height:22px}
+.stat .stat-icon.blue{background:var(--accent-glow);color:var(--accent)}
+.stat .stat-icon.green{background:var(--green-bg);color:var(--green)}
+.stat .stat-icon.yellow{background:var(--yellow-bg);color:var(--yellow)}
+.stat .stat-icon.purple{background:var(--purple-bg);color:var(--purple)}
+.stat .num{font-size:32px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.stat .label{font-size:12px;color:var(--text3);font-weight:500;margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:16px;margin-bottom:20px;overflow:hidden}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.section-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:10px}
+.section-title i{width:20px;height:20px;color:var(--accent)}
+.section-body{padding:20px}
+
 table{width:100%;border-collapse:collapse}
-th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #21262d}
-td{padding:10px 12px;border-bottom:1px solid #21262d;font-size:13px}
-tr:hover td{background:#1c2128}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.badge-green{background:#0d4429;color:#3fb950}
-.badge-gray{background:#21262d;color:#8b949e}
-.badge-blue{background:#0c2d6b;color:#58a6ff}
-.btn{padding:8px 16px;border-radius:8px;border:none;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:#238636;color:#fff}.btn-primary:hover{background:#2ea043}
-.btn-danger{background:#da3633;color:#fff}.btn-danger:hover{background:#f85149}
-.btn-secondary{background:#21262d;color:#c9d1d9;border:1px solid #30363d}.btn-secondary:hover{background:#30363d}
-.btn-sm{padding:5px 12px;font-size:12px}
-.form-group{margin-bottom:14px}
-.form-group label{display:block;font-size:12px;font-weight:500;color:#8b949e;margin-bottom:6px}
-.form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 12px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:13px;outline:none;transition:border-color .2s}
-.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#58a6ff}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+th{text-align:left;padding:12px 16px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--bg)}
+td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(59,130,246,.03)}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.3px}
+.badge-green{background:var(--green-bg);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+.badge-gray{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+.badge-blue{background:var(--accent-glow);color:var(--accent2);border:1px solid rgba(59,130,246,.2)}
+.badge-yellow{background:var(--yellow-bg);color:var(--yellow);border:1px solid rgba(245,158,11,.2)}
+.badge-red{background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+
+.btn{padding:8px 16px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;font-family:'Inter',sans-serif}
+.btn i{width:15px;height:15px}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 0 15px rgba(59,130,246,.2)}.btn-primary:hover{background:#2563eb;box-shadow:0 0 25px rgba(59,130,246,.3)}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#dc2626}
+.btn-secondary{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}.btn-secondary:hover{background:var(--bg4);border-color:var(--border2)}
+.btn-ghost{background:transparent;color:var(--text3)}.btn-ghost:hover{color:var(--text);background:var(--bg3)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-lg{padding:12px 24px;font-size:14px}
+
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:all .2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.form-group textarea{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-hint{font-size:11px;color:var(--text3);margin-top:4px}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
 .modal-overlay.show{opacity:1;pointer-events:auto}
-.modal{background:#161b22;border:1px solid #21262d;border-radius:16px;padding:24px;width:90%;max-width:500px;max-height:85vh;overflow-y:auto}
-.modal h3{font-size:16px;margin-bottom:16px;color:#e6edf3}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
-.patch-img{width:44px;height:44px;border-radius:10px;object-fit:cover;background:#21262d}
-.patch-img-placeholder{width:44px;height:44px;border-radius:10px;background:#21262d;display:flex;align-items:center;justify-content:center;color:#484f58;font-size:18px}
-.toggle{position:relative;width:40px;height:22px;cursor:pointer}
-.toggle input{opacity:0;width:0;height:0}
-.toggle .slider{position:absolute;inset:0;background:#21262d;border-radius:22px;transition:.3s}
-.toggle .slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:#8b949e;border-radius:50%;transition:.3s}
-.toggle input:checked+.slider{background:#238636}
-.toggle input:checked+.slider:before{transform:translateX(18px);background:#fff}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
-.stat{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:14px;text-align:center}
-.stat .num{font-size:24px;font-weight:700;color:#58a6ff}
-.stat .label{font-size:11px;color:#8b949e;margin-top:4px}
-.empty{text-align:center;padding:40px;color:#484f58}
-.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:300;transform:translateY(100px);opacity:0;transition:all .3s}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:28px;width:92%;max-width:540px;max-height:85vh;overflow-y:auto;transform:scale(.95);transition:transform .25s}
+.modal-overlay.show .modal{transform:scale(1)}
+.modal h3{font-size:18px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.modal h3 i{width:22px;height:22px;color:var(--accent)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)}
+
+.patch-img{width:48px;height:48px;border-radius:12px;object-fit:cover;background:var(--bg3);border:1px solid var(--border)}
+.patch-img-placeholder{width:48px;height:48px;border-radius:12px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text3)}
+.patch-img-placeholder i{width:20px;height:20px}
+
+.toggle{position:relative;width:44px;height:24px;cursor:pointer;display:inline-block}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle .slider{position:absolute;inset:0;background:var(--bg3);border:1px solid var(--border);border-radius:24px;transition:all .3s}
+.toggle .slider:before{content:'';position:absolute;width:18px;height:18px;left:2px;bottom:2px;background:var(--text3);border-radius:50%;transition:all .3s}
+.toggle input:checked+.slider{background:var(--accent);border-color:var(--accent)}
+.toggle input:checked+.slider:before{transform:translateX(20px);background:#fff}
+
+.empty{text-align:center;padding:48px 20px;color:var(--text3)}
+.empty i{width:48px;height:48px;margin-bottom:16px;opacity:.3}
+.empty p{font-size:14px;margin-top:8px}
+
+.toast{position:fixed;bottom:24px;right:24px;padding:14px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:300;transform:translateY(100px);opacity:0;transition:all .3s;display:flex;align-items:center;gap:8px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
 .toast.show{transform:translateY(0);opacity:1}
-.toast-ok{background:#0d4429;color:#3fb950;border:1px solid #238636}
-.toast-err{background:#490202;color:#f85149;border:1px solid #da3633}
+.toast i{width:18px;height:18px}
+.toast-ok{background:var(--green-bg);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.toast-err{background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.toast i{color:inherit}
+
 .file-input{position:relative;overflow:hidden;display:inline-block}
 .file-input input[type=file]{position:absolute;left:0;top:0;opacity:0;width:100%;height:100%;cursor:pointer}
+
+.tab-bar{display:flex;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:16px}
+.tab-bar .tab{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text3);display:flex;align-items:center;gap:6px;border:none;background:none;font-family:'Inter',sans-serif}
+.tab-bar .tab i{width:14px;height:14px}
+.tab-bar .tab:hover{color:var(--text);background:var(--bg3)}
+.tab-bar .tab.active{color:#fff;background:var(--accent)}
+
+.builder-preview{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2);max-height:200px;overflow-y:auto;white-space:pre-wrap;margin-top:12px}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .3s ease-out}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.loading{animation:pulse 1.5s infinite}
+
+@media(max-width:768px){
+  .header{padding:12px 16px;flex-direction:column;gap:12px}
+  .container{padding:16px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .form-row{grid-template-columns:1fr}
+  .nav{width:100%;justify-content:center}
+}
 </style>
 </head>
 <body>
+
 <div class="header">
-  <div>
-    <h1>NovaX Patch Manager</h1>
-    <div class="subtitle">Quản lý chức năng & patches</div>
+  <div class="header-left">
+    <div class="logo"><i data-feather="cpu"></i></div>
+    <div>
+      <h1>Nova<span>X</span> Patch Manager</h1>
+      <div class="subtitle">Quản lý chức năng & phân phối bản vá</div>
+    </div>
   </div>
   <div class="nav">
-    <a href="/">Auth</a>
-    <a href="/admin/patches" class="active">Patches</a>
+    <a href="/"><i data-feather="shield"></i> Auth</a>
+    <a href="/admin/patches" class="active"><i data-feather="grid"></i> Patches</a>
   </div>
 </div>
 
 <div class="container">
-  <div class="stats" id="stats"></div>
+  <div class="stats fade-in" id="stats"></div>
 
-  <div class="card">
-    <h2><span class="icon">🎮</span> Game Categories</h2>
-    <div style="margin-bottom:12px">
-      <button class="btn btn-primary btn-sm" onclick="showCategoryModal()">+ Thêm Category</button>
+  <!-- Categories Section -->
+  <div class="section fade-in">
+    <div class="section-header">
+      <div class="section-title"><i data-feather="layers"></i> Game Categories</div>
+      <button class="btn btn-primary btn-sm" onclick="showCategoryModal()"><i data-feather="plus"></i> Thêm Category</button>
     </div>
-    <table>
-      <thead><tr><th>ID</th><th>Tên</th><th>Icon</th><th>Sort</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
-      <tbody id="catTable"></tbody>
-    </table>
+    <div class="section-body" style="padding:0">
+      <table>
+        <thead><tr><th>Ảnh</th><th>ID</th><th>Tên</th><th>Icon</th><th>Sort</th><th>Trạng thái</th><th style="text-align:right">Hành động</th></tr></thead>
+        <tbody id="catTable"></tbody>
+      </table>
+    </div>
   </div>
 
-  <div class="card">
-    <h2><span class="icon">🧩</span> Patches</h2>
-    <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" onclick="showPatchModal()">+ Thêm Patch</button>
-      <select id="filterCat" onchange="loadPatches()" style="padding:6px 12px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:12px">
-        <option value="">Tất cả categories</option>
-      </select>
+  <!-- Patches Section -->
+  <div class="section fade-in">
+    <div class="section-header">
+      <div class="section-title"><i data-feather="package"></i> Patches</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="filterCat" onchange="loadPatches()" style="padding:7px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-family:'Inter',sans-serif;outline:none">
+          <option value="">Tất cả categories</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="showPatchModal()"><i data-feather="plus"></i> Thêm Patch</button>
+      </div>
     </div>
-    <table>
-      <thead><tr><th>Ảnh</th><th>Tên</th><th>Category</th><th>File</th><th>Version</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
-      <tbody id="patchTable"></tbody>
-    </table>
+    <div class="section-body" style="padding:0">
+      <table>
+        <thead><tr><th>Ảnh</th><th>Tên</th><th>Category</th><th>File</th><th>Version</th><th>Trạng thái</th><th style="text-align:right">Hành động</th></tr></thead>
+        <tbody id="patchTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- .3105 Builder Section -->
+  <div class="section fade-in">
+    <div class="section-header">
+      <div class="section-title"><i data-feather="file-plus"></i> .3105 File Builder</div>
+    </div>
+    <div class="section-body">
+      <p style="font-size:13px;color:var(--text3);margin-bottom:16px">Tạo file .3105 trực tiếp trên trình duyệt và tải về. File được mã hóa AES-256-GCM.</p>
+      <div class="form-row">
+        <div class="form-group"><label>Tên Project</label><input id="bldName" placeholder="My Patch v1"></div>
+        <div class="form-group"><label>Bundle ID (mỗi dòng 1 cái)</label><input id="bldBundle" placeholder="com.example.app"></div>
+      </div>
+      <div class="form-group"><label>Mô tả (tùy chọn)</label><input id="bldDesc" placeholder="Mô tả patch"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Password保护 (tùy chọn)</label>
+          <input id="bldPass" type="password" placeholder="Để trống = không mã hóa">
+          <div class="form-hint">Nếu để trống, file sẽ dùng public key</div>
+        </div>
+        <div class="form-group">
+          <label>Schema Version</label>
+          <select id="bldSchema"><option value="2">v2 (Workspace)</option><option value="1">v1 (Legacy)</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Replacement Files</label>
+        <div class="file-input btn btn-secondary btn-sm"><i data-feather="upload"></i> Chọn files<input type="file" id="bldFiles" multiple></div>
+        <span id="bldFilesInfo" style="margin-left:10px;font-size:12px;color:var(--text3)"></span>
+      </div>
+      <div id="bldFileList" style="margin-top:10px"></div>
+      <div style="margin-top:20px;display:flex;gap:10px;align-items:center">
+        <button class="btn btn-primary btn-lg" onclick="buildPackage()" id="bldBtn"><i data-feather="download"></i> Tạo & Tải .3105</button>
+        <span id="bldStatus" style="font-size:12px;color:var(--text3)"></span>
+      </div>
+      <div class="builder-preview" id="bldPreview" style="display:none"></div>
+    </div>
   </div>
 </div>
 
+<!-- Category Modal -->
 <div class="modal-overlay" id="catModal">
   <div class="modal">
-    <h3 id="catModalTitle">Thêm Category</h3>
+    <h3 id="catModalTitle"><i data-feather="layers"></i> Thêm Category</h3>
     <input type="hidden" id="catEditId">
     <div class="form-group"><label>Tên</label><input id="catName" placeholder="Free Fire"></div>
     <div class="form-row">
       <div class="form-group"><label>Icon (SF Symbol)</label><input id="catIcon" placeholder="flame.fill"></div>
       <div class="form-group"><label>Sort Order</label><input id="catSort" type="number" value="0"></div>
     </div>
+    <div class="form-group"><label>Ảnh category</label>
+      <div class="file-input btn btn-secondary btn-sm"><i data-feather="image"></i> Chọn ảnh<input type="file" id="catImage" accept="image/*"></div>
+      <span id="catImageName" style="margin-left:10px;font-size:12px;color:var(--text3)"></span>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('catModal')">Hủy</button>
-      <button class="btn btn-primary" onclick="saveCategory()">Lưu</button>
+      <button class="btn btn-primary" onclick="saveCategory()"><i data-feather="check"></i> Lưu</button>
     </div>
   </div>
 </div>
 
+<!-- Patch Modal -->
 <div class="modal-overlay" id="patchModal">
   <div class="modal">
-    <h3 id="patchModalTitle">Thêm Patch</h3>
+    <h3 id="patchModalTitle"><i data-feather="package"></i> Thêm Patch</h3>
     <input type="hidden" id="patchEditId">
     <div class="form-row">
       <div class="form-group"><label>Tên</label><input id="patchName" placeholder="Aimbot"></div>
@@ -2147,16 +2275,16 @@ tr:hover td{background:#1c2128}
       </div>
     </div>
     <div class="form-group"><label>Ảnh preview</label>
-      <div class="file-input btn btn-secondary btn-sm">📁 Chọn ảnh<input type="file" id="patchImage" accept="image/*"></div>
-      <span id="imageName" style="margin-left:8px;font-size:12px;color:#8b949e"></span>
+      <div class="file-input btn btn-secondary btn-sm"><i data-feather="image"></i> Chọn ảnh<input type="file" id="patchImage" accept="image/*"></div>
+      <span id="imageName" style="margin-left:10px;font-size:12px;color:var(--text3)"></span>
     </div>
     <div class="form-group"><label>File .3105</label>
-      <div class="file-input btn btn-secondary btn-sm">📁 Chọn file<input type="file" id="patchFile" accept=".3105"></div>
-      <span id="fileName" style="margin-left:8px;font-size:12px;color:#8b949e"></span>
+      <div class="file-input btn btn-secondary btn-sm"><i data-feather="file"></i> Chọn file<input type="file" id="patchFile" accept=".3105"></div>
+      <span id="fileName" style="margin-left:10px;font-size:12px;color:var(--text3)"></span>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('patchModal')">Hủy</button>
-      <button class="btn btn-primary" onclick="savePatch()">Lưu</button>
+      <button class="btn btn-primary" onclick="savePatch()"><i data-feather="check"></i> Lưu</button>
     </div>
   </div>
 </div>
@@ -2166,6 +2294,7 @@ tr:hover td{background:#1c2128}
 <script>
 const API = '';
 let categories = [];
+let bldFileData = [];
 
 async function api(path, opts = {}) {
   const headers = { 'Authorization': 'Basic ' + btoa('admin:mkhaidz'), ...opts.headers };
@@ -2179,13 +2308,15 @@ async function api(path, opts = {}) {
 
 function toast(msg, ok = true) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
+  const icon = ok ? '<i data-feather="check-circle"></i>' : '<i data-feather="alert-circle"></i>';
+  t.innerHTML = icon + ' ' + msg;
   t.className = 'toast show ' + (ok ? 'toast-ok' : 'toast-err');
-  setTimeout(() => t.className = 'toast', 3000);
+  feather.replace();
+  setTimeout(() => t.className = 'toast', 3500);
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-function openModal(id) { document.getElementById(id).classList.add('show'); }
+function openModal(id) { document.getElementById(id).classList.add('show'); feather.replace(); }
 
 // ─── Stats ───
 async function loadStats() {
@@ -2194,10 +2325,11 @@ async function loadStats() {
   const patches = patchRes.data || [];
   const active = patches.filter(p => p.is_active).length;
   document.getElementById('stats').innerHTML =
-    '<div class="stat"><div class="num">' + cats.length + '</div><div class="label">Categories</div></div>' +
-    '<div class="stat"><div class="num">' + patches.length + '</div><div class="label">Total Patches</div></div>' +
-    '<div class="stat"><div class="num">' + active + '</div><div class="label">Active</div></div>' +
-    '<div class="stat"><div class="num">' + (patches.length - active) + '</div><div class="label">Inactive</div></div>';
+    '<div class="stat"><div class="stat-icon blue"><i data-feather="layers"></i></div><div class="num">' + cats.length + '</div><div class="label">Categories</div></div>' +
+    '<div class="stat"><div class="stat-icon purple"><i data-feather="package"></i></div><div class="num">' + patches.length + '</div><div class="label">Total Patches</div></div>' +
+    '<div class="stat"><div class="stat-icon green"><i data-feather="check-circle"></i></div><div class="num">' + active + '</div><div class="label">Active</div></div>' +
+    '<div class="stat"><div class="stat-icon yellow"><i data-feather="pause-circle"></i></div><div class="num">' + (patches.length - active) + '</div><div class="label">Inactive</div></div>';
+  feather.replace();
 }
 
 // ─── Categories ───
@@ -2205,30 +2337,37 @@ async function loadCategories() {
   const res = await api('/api/admin/ff/categories');
   categories = res.data || [];
   const tbody = document.getElementById('catTable');
-  if (!categories.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Chưa có category nào</td></tr>'; return; }
-  tbody.innerHTML = categories.map(c => '<tr>' +
-    '<td>' + c.id + '</td>' +
-    '<td><strong>' + c.name + '</strong></td>' +
-    '<td>' + (c.icon || '-') + '</td>' +
+  if (!categories.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty"><i data-feather="inbox"></i><p>Chưa có category nào</p></td></tr>';
+    feather.replace(); return;
+  }
+  tbody.innerHTML = categories.map(c => {
+    const imgHtml = c.image_url ? '<img src="' + c.image_url + '" class="patch-img">' : '<div class="patch-img-placeholder"><i data-feather="layers"></i></div>';
+    return '<tr>' +
+    '<td>' + imgHtml + '</td>' +
+    '<td><span style="color:var(--text3);font-family:JetBrains Mono,monospace">#' + c.id + '</span></td>' +
+    '<td><strong>' + esc(c.name) + '</strong></td>' +
+    '<td><code style="background:var(--bg3);padding:2px 8px;border-radius:4px;font-size:12px">' + esc(c.icon || '-') + '</code></td>' +
     '<td>' + c.sort_order + '</td>' +
-    '<td>' + (c.is_active ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-gray">Inactive</span>') + '</td>' +
-    '<td><button class="btn btn-secondary btn-sm" onclick="editCategory(' + c.id + ')">✏️</button> ' +
-    '<button class="btn btn-danger btn-sm" onclick="deleteCategory(' + c.id + ')">🗑️</button></td>' +
-    '</tr>').join('');
-  // Update filter dropdown
+    '<td>' + (c.is_active ? '<span class="badge badge-green"><i data-feather="check" style="width:12px;height:12px"></i> Active</span>' : '<span class="badge badge-gray"><i data-feather="minus" style="width:12px;height:12px"></i> Inactive</span>') + '</td>' +
+    '<td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="editCategory(' + c.id + ')"><i data-feather="edit-2"></i></button> ' +
+    '<button class="btn btn-ghost btn-sm" onclick="deleteCategory(' + c.id + ')" style="color:var(--red)"><i data-feather="trash-2"></i></button></td></tr>';
+  }).join('');
   const sel = document.getElementById('filterCat');
   const patchSel = document.getElementById('patchCat');
-  const opts = '<option value="">Tất cả</option>' + categories.map(c => '<option value="' + c.id + '">' + c.name + '</option>').join('');
   sel.innerHTML = '<option value="">Tất cả categories</option>' + categories.map(c => '<option value="' + c.id + '">' + c.name + '</option>').join('');
   patchSel.innerHTML = categories.map(c => '<option value="' + c.id + '">' + c.name + '</option>').join('');
+  feather.replace();
 }
 
 function showCategoryModal(cat) {
-  document.getElementById('catModalTitle').textContent = cat ? 'Sửa Category' : 'Thêm Category';
+  document.getElementById('catModalTitle').innerHTML = '<i data-feather="layers"></i> ' + (cat ? 'Sửa Category' : 'Thêm Category');
   document.getElementById('catEditId').value = cat ? cat.id : '';
   document.getElementById('catName').value = cat ? cat.name : '';
-  document.getElementById('catIcon').value = cat ? cat.icon : '';
+  document.getElementById('catIcon').value = cat ? (cat.icon || '') : '';
   document.getElementById('catSort').value = cat ? cat.sort_order : 0;
+  document.getElementById('catImageName').textContent = '';
+  document.getElementById('catImage').value = '';
   openModal('catModal');
 }
 
@@ -2245,16 +2384,22 @@ async function saveCategory() {
     icon: document.getElementById('catIcon').value.trim(),
     sort_order: parseInt(document.getElementById('catSort').value) || 0
   };
+  const imageFile = document.getElementById('catImage').files[0];
   if (!body.name) { toast('Nhập tên category', false); return; }
+  if (imageFile) {
+    const imgRes = await uploadFile(imageFile, 'image');
+    if (imgRes.success) body.image_url = imgRes.url;
+    else { toast('Upload ảnh thất bại', false); return; }
+  }
   const res = id ? await api('/api/admin/ff/categories/' + id, { method: 'PUT', body }) : await api('/api/admin/ff/categories', { method: 'POST', body });
-  if (res.success) { toast(id ? 'Đã cập nhật' : 'Đã tạo'); closeModal('catModal'); loadCategories(); loadStats(); }
+  if (res.success) { toast(id ? 'Đã cập nhật category' : 'Đã tạo category'); closeModal('catModal'); loadCategories(); loadStats(); }
   else { toast(res.message || 'Lỗi', false); }
 }
 
 async function deleteCategory(id) {
   if (!confirm('Xóa category này? Patches trong category cũng sẽ bị xóa.')) return;
   const res = await api('/api/admin/ff/categories/' + id, { method: 'DELETE' });
-  if (res.success) { toast('Đã xóa'); loadCategories(); loadStats(); loadPatches(); }
+  if (res.success) { toast('Đã xóa category'); loadCategories(); loadStats(); loadPatches(); }
   else { toast(res.message || 'Lỗi', false); }
 }
 
@@ -2265,29 +2410,33 @@ async function loadPatches() {
   const res = await api(url);
   const patches = res.data || [];
   const tbody = document.getElementById('patchTable');
-  if (!patches.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Chưa có patch nào</td></tr>'; return; }
+  if (!patches.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty"><i data-feather="inbox"></i><p>Chưa có patch nào</p></td></tr>';
+    feather.replace(); return;
+  }
   tbody.innerHTML = patches.map(p => {
     const cat = categories.find(c => c.id === p.category_id);
-    const imgHtml = p.image_url ? '<img src="' + p.image_url + '" class="patch-img">' : '<div class="patch-img-placeholder">🧩</div>';
+    const imgHtml = p.image_url ? '<img src="' + p.image_url + '" class="patch-img">' : '<div class="patch-img-placeholder"><i data-feather="image"></i></div>';
+    const fileSize = p.file_size ? (p.file_size > 1048576 ? (p.file_size/1048576).toFixed(1)+' MB' : Math.round(p.file_size/1024)+' KB') : '';
     return '<tr>' +
       '<td>' + imgHtml + '</td>' +
-      '<td><strong>' + p.name + '</strong><br><span style="font-size:11px;color:#8b949e">' + (p.slug || '') + '</span></td>' +
-      '<td>' + (cat ? cat.name : p.category_id) + '</td>' +
-      '<td>' + (p.file_url ? '<span class="badge badge-blue">' + (p.file_size ? Math.round(p.file_size/1024) + ' KB' : '✓') + '</span>' : '<span class="badge badge-gray">Chưa upload</span>') + '</td>' +
-      '<td>v' + (p.version || 1) + '</td>' +
+      '<td><strong>' + esc(p.name) + '</strong><br><span style="font-size:11px;color:var(--text3);font-family:JetBrains Mono,monospace">' + esc(p.slug || '') + '</span></td>' +
+      '<td>' + (cat ? '<span class="badge badge-blue">' + esc(cat.name) + '</span>' : '<span class="badge badge-gray">#' + p.category_id + '</span>') + '</td>' +
+      '<td>' + (p.file_url ? '<span class="badge badge-green"><i data-feather="file" style="width:11px;height:11px"></i> ' + fileSize + '</span>' : '<span class="badge badge-gray">Chưa upload</span>') + '</td>' +
+      '<td><span style="font-family:JetBrains Mono,monospace;font-weight:700">v' + (p.version || 1) + '</span></td>' +
       '<td><label class="toggle"><input type="checkbox" ' + (p.is_active ? 'checked' : '') + ' onchange="togglePatch(' + p.id + ',this.checked)"><span class="slider"></span></label></td>' +
-      '<td><button class="btn btn-secondary btn-sm" onclick="editPatch(' + p.id + ')">✏️</button> ' +
-      '<button class="btn btn-danger btn-sm" onclick="deletePatch(' + p.id + ')">🗑️</button></td>' +
-      '</tr>';
+      '<td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="editPatch(' + p.id + ')"><i data-feather="edit-2"></i></button> ' +
+      '<button class="btn btn-ghost btn-sm" onclick="deletePatch(' + p.id + ')" style="color:var(--red)"><i data-feather="trash-2"></i></button></td></tr>';
   }).join('');
+  feather.replace();
 }
 
 function showPatchModal(patch) {
-  document.getElementById('patchModalTitle').textContent = patch ? 'Sửa Patch' : 'Thêm Patch';
+  document.getElementById('patchModalTitle').innerHTML = '<i data-feather="package"></i> ' + (patch ? 'Sửa Patch' : 'Thêm Patch');
   document.getElementById('patchEditId').value = patch ? patch.id : '';
   document.getElementById('patchName').value = patch ? patch.name : '';
   document.getElementById('patchCat').value = patch ? patch.category_id : (categories[0]?.id || '');
-  document.getElementById('patchDesc').value = patch ? patch.description : '';
+  document.getElementById('patchDesc').value = patch ? (patch.description || '') : '';
   document.getElementById('patchSort').value = patch ? patch.sort_order : 0;
   document.getElementById('patchActive').value = patch ? String(patch.is_active) : 'true';
   document.getElementById('imageName').textContent = '';
@@ -2323,12 +2472,9 @@ async function savePatch() {
   const is_active = document.getElementById('patchActive').value === 'true';
   const imageFile = document.getElementById('patchImage').files[0];
   const patchFile = document.getElementById('patchFile').files[0];
-
   if (!name) { toast('Nhập tên patch', false); return; }
   if (!category_id) { toast('Chọn category', false); return; }
-
   const body = { name, category_id, description, sort_order, is_active };
-
   if (imageFile) {
     const imgRes = await uploadFile(imageFile, 'image');
     if (imgRes.success) body.image_url = imgRes.url;
@@ -2339,9 +2485,8 @@ async function savePatch() {
     if (fileRes.success) { body.file_url = fileRes.url; body.file_hash = fileRes.hash; body.file_size = fileRes.size; }
     else { toast('Upload file thất bại', false); return; }
   }
-
   const res = id ? await api('/api/admin/ff/patches/' + id, { method: 'PUT', body }) : await api('/api/admin/ff/patches', { method: 'POST', body });
-  if (res.success) { toast(id ? 'Đã cập nhật' : 'Đã tạo'); closeModal('patchModal'); loadPatches(); loadStats(); }
+  if (res.success) { toast(id ? 'Đã cập nhật patch' : 'Đã tạo patch'); closeModal('patchModal'); loadPatches(); loadStats(); }
   else { toast(res.message || 'Lỗi', false); }
 }
 
@@ -2353,15 +2498,375 @@ async function togglePatch(id, active) {
 async function deletePatch(id) {
   if (!confirm('Xóa patch này?')) return;
   const res = await api('/api/admin/ff/patches/' + id, { method: 'DELETE' });
-  if (res.success) { toast('Đã xóa'); loadPatches(); loadStats(); }
+  if (res.success) { toast('Đã xóa patch'); loadPatches(); loadStats(); }
   else { toast(res.message || 'Lỗi', false); }
+}
+
+// ─── .3105 Builder ───
+document.getElementById('bldFiles').addEventListener('change', function() {
+  bldFileData = [];
+  const info = document.getElementById('bldFilesInfo');
+  const list = document.getElementById('bldFileList');
+  if (!this.files.length) { info.textContent = ''; list.innerHTML = ''; return; }
+  const promises = Array.from(this.files).map(f => new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => { bldFileData.push({ name: f.name, size: f.size, data: new Uint8Array(reader.result) }); resolve(); };
+    reader.readAsArrayBuffer(f);
+  }));
+  Promise.all(promises).then(() => {
+    info.textContent = bldFileData.length + ' file(s), ' + formatSize(bldFileData.reduce((a,b) => a + b.size, 0));
+    list.innerHTML = bldFileData.map((f,i) =>
+      '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:12px">' +
+      '<i data-feather="file" style="width:14px;height:14px;color:var(--accent)"></i>' +
+      '<span style="flex:1;font-family:JetBrains Mono,monospace">' + esc(f.name) + '</span>' +
+      '<span style="color:var(--text3)">' + formatSize(f.size) + '</span>' +
+      '<button class="btn btn-ghost btn-sm" onclick="removeBldFile(' + i + ')" style="color:var(--red);padding:2px"><i data-feather="x" style="width:14px;height:14px"></i></button>' +
+      '</div>'
+    ).join('');
+    feather.replace();
+  });
+});
+
+function removeBldFile(idx) {
+  bldFileData.splice(idx, 1);
+  document.getElementById('bldFiles').dispatchEvent(new Event('change'));
+}
+
+function formatSize(bytes) {
+  if (bytes > 1048576) return (bytes/1048576).toFixed(1) + ' MB';
+  if (bytes > 1024) return Math.round(bytes/1024) + ' KB';
+  return bytes + ' B';
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ─── Binary Plist Encoder ───
+const PLIST = {
+  MAGIC: 'bplist00',
+
+  encode(rootObj) {
+    const objects = [];
+    const objIndex = new Map();
+
+    function collect(obj) {
+      if (obj === null || obj === undefined) {
+        const key = 'null';
+        if (!objIndex.has(key)) { objIndex.set(key, objects.length); objects.push(null); }
+        return objIndex.get(key);
+      }
+      if (typeof obj === 'boolean') {
+        const key = 'b:' + obj;
+        if (!objIndex.has(key)) { objIndex.set(key, objects.length); objects.push(obj); }
+        return objIndex.get(key);
+      }
+      if (typeof obj === 'number') {
+        const key = 'n:' + obj;
+        if (!objIndex.has(key)) { objIndex.set(key, objects.length); objects.push(obj); }
+        return objIndex.get(key);
+      }
+      if (typeof obj === 'string') {
+        const key = 's:' + obj;
+        if (!objIndex.has(key)) { objIndex.set(key, objects.length); objects.push(obj); }
+        return objIndex.get(key);
+      }
+      if (obj instanceof Uint8Array || obj instanceof ArrayBuffer) {
+        const u8 = obj instanceof ArrayBuffer ? new Uint8Array(obj) : obj;
+        const idx = objects.length;
+        objects.push(u8);
+        return idx;
+      }
+      if (Array.isArray(obj)) {
+        const idx = objects.length;
+        const itemRefs = obj.map(item => collect(item));
+        objects.push({ _type: 'array', _refs: itemRefs });
+        return idx;
+      }
+      if (typeof obj === 'object') {
+        const idx = objects.length;
+        const keys = Object.keys(obj).sort();
+        const kRefs = keys.map(k => collect(k));
+        const vRefs = keys.map(k => collect(obj[k]));
+        objects.push({ _type: 'dict', _keys: kRefs, _vals: vRefs });
+        return idx;
+      }
+      return 0;
+    }
+
+    collect(rootObj);
+    const numObjects = objects.length;
+
+    let refSize = 1;
+    if (numObjects > 255) refSize = 2;
+    if (numObjects > 65535) refSize = 4;
+
+    const encoded = [];
+    const offsets = [];
+    let cursor = 0;
+    for (let i = 0; i < numObjects; i++) {
+      const bytes = this._encodeObj(objects[i], refSize);
+      offsets.push(cursor);
+      cursor += bytes.length;
+      encoded.push(bytes);
+    }
+
+    const parts = [];
+    const header = new Uint8Array(8 + 5 * 4);
+    let hp = 0;
+    for (let c of 'bplist00') header[hp++] = c.charCodeAt(0);
+    header[hp++] = 0; header[hp++] = 0; header[hp++] = 0; header[hp++] = 0x08;
+    header[hp++] = 0; header[hp++] = 0; header[hp++] = 0; header[hp++] = 0;
+    header[hp++] = (numObjects >>> 24) & 0xff; header[hp++] = (numObjects >>> 16) & 0xff;
+    header[hp++] = (numObjects >>> 8) & 0xff; header[hp++] = numObjects & 0xff;
+    const otoOffset = 8 + 20 + cursor;
+    header[hp++] = 0; header[hp++] = 0; header[hp++] = 0; header[hp++] = 0;
+    header[hp++] = (otoOffset >>> 24) & 0xff; header[hp++] = (otoOffset >>> 16) & 0xff;
+    header[hp++] = (otoOffset >>> 8) & 0xff; header[hp++] = otoOffset & 0xff;
+    header[hp++] = 0; header[hp++] = 0; header[hp++] = 0; header[hp++] = refSize;
+    header[hp++] = (numObjects >>> 24) & 0xff; header[hp++] = (numObjects >>> 16) & 0xff;
+    header[hp++] = (numObjects >>> 8) & 0xff; header[hp++] = numObjects & 0xff;
+    header[hp++] = 0; header[hp++] = 0; header[hp++] = 0; header[hp++] = 0x08;
+    parts.push(header);
+    for (const b of encoded) parts.push(b);
+    for (const off of offsets) {
+      const part = new Uint8Array(8);
+      const h = Math.floor(off / 0x100000000);
+      const l = off & 0xFFFFFFFF;
+      part[0]=(h>>>24)&0xff; part[1]=(h>>>16)&0xff; part[2]=(h>>>8)&0xff; part[3]=h&0xff;
+      part[4]=(l>>>24)&0xff; part[5]=(l>>>16)&0xff; part[6]=(l>>>8)&0xff; part[7]=l&0xff;
+      parts.push(part);
+    }
+    let totalLen = 0;
+    for (const p of parts) totalLen += p.length;
+    const result = new Uint8Array(totalLen);
+    let rp = 0;
+    for (const p of parts) { result.set(p, rp); rp += p.length; }
+    return result;
+  },
+
+  _encodeObj(obj, refSize) {
+    if (obj === null) return new Uint8Array([0x00]);
+    if (typeof obj === 'boolean') return new Uint8Array([obj ? 0x09 : 0x08]);
+    if (typeof obj === 'number') {
+      if (Number.isInteger(obj)) {
+        if (obj < 0) {
+          const abs = Math.abs(obj);
+          if (abs < 0x80) return new Uint8Array([0x11, 0x00, abs]);
+          if (abs < 0x8000) return new Uint8Array([0x12, 0x00, (abs>>8)&0xff, abs&0xff]);
+          return new Uint8Array([0x13, 0x00, (abs>>24)&0xff, (abs>>16)&0xff, (abs>>8)&0xff, abs&0xff]);
+        }
+        if (obj < 0x100) return new Uint8Array([0x10, 0x00, obj]);
+        if (obj < 0x10000) return new Uint8Array([0x10, 0x01, (obj>>8)&0xff, obj&0xff]);
+        if (obj < 0x100000000) return new Uint8Array([0x10, 0x02, (obj>>24)&0xff, (obj>>16)&0xff, (obj>>8)&0xff, obj&0xff]);
+        const hi = Math.floor(obj / 0x100000000); const lo = obj & 0xFFFFFFFF;
+        return new Uint8Array([0x10, 0x03, (hi>>>24)&0xff, (hi>>>16)&0xff, (hi>>>8)&0xff, hi&0xff, (lo>>>24)&0xff, (lo>>>16)&0xff, (lo>>>8)&0xff, lo&0xff]);
+      }
+      const buf = new ArrayBuffer(8);
+      new DataView(buf).setFloat64(0, obj, false);
+      return new Uint8Array([0x23, ...new Uint8Array(buf)]);
+    }
+    if (typeof obj === 'string') {
+      const s = new TextEncoder().encode(obj);
+      if (s.length < 15) return new Uint8Array([0x50 | s.length, ...s]);
+      const lenBytes = s.length < 0x100 ? [0x10, 0x00, s.length] :
+                       s.length < 0x10000 ? [0x10, 0x01, (s.length>>8)&0xff, s.length&0xff] :
+                       [0x10, 0x02, (s.length>>24)&0xff, (s.length>>16)&0xff, (s.length>>8)&0xff, s.length&0xff];
+      return new Uint8Array([0x5f, ...lenBytes, ...s]);
+    }
+    if (obj instanceof Uint8Array) {
+      if (obj.length < 15) return new Uint8Array([0x40 | obj.length, ...obj]);
+      const lenBytes = obj.length < 0x100 ? [0x10, 0x00, obj.length] :
+                       obj.length < 0x10000 ? [0x10, 0x01, (obj.length>>8)&0xff, obj.length&0xff] :
+                       [0x10, 0x02, (obj.length>>24)&0xff, (obj.length>>16)&0xff, (obj.length>>8)&0xff, obj.length&0xff];
+      return new Uint8Array([0x4f, ...lenBytes, ...obj]);
+    }
+    if (obj && obj._type === 'array') {
+      const refs = obj._refs;
+      const refBytes = this._encodeRefs(refs, refSize);
+      if (refs.length < 15) return new Uint8Array([0xA0 | refs.length, ...refBytes]);
+      const lenBytes = refs.length < 0x100 ? [0x10, 0x00, refs.length] :
+                       refs.length < 0x10000 ? [0x10, 0x01, (refs.length>>8)&0xff, refs.length&0xff] :
+                       [0x10, 0x02, (refs.length>>24)&0xff, (refs.length>>16)&0xff, (refs.length>>8)&0xff, refs.length&0xff];
+      return new Uint8Array([0xAF, ...lenBytes, ...refBytes]);
+    }
+    if (obj && obj._type === 'dict') {
+      const count = obj._keys.length;
+      const kBytes = this._encodeRefs(obj._keys, refSize);
+      const vBytes = this._encodeRefs(obj._vals, refSize);
+      if (count < 15) return new Uint8Array([0xD0 | count, ...kBytes, ...vBytes]);
+      const lenBytes = count < 0x100 ? [0x10, 0x00, count] :
+                       count < 0x10000 ? [0x10, 0x01, (count>>8)&0xff, count&0xff] :
+                       [0x10, 0x02, (count>>24)&0xff, (count>>16)&0xff, (count>>8)&0xff, count&0xff];
+      return new Uint8Array([0xDF, ...lenBytes, ...kBytes, ...vBytes]);
+    }
+    return new Uint8Array([0x00]);
+  },
+
+  _encodeRefs(refs, refSize) {
+    const buf = new Uint8Array(refs.length * refSize);
+    for (let i = 0; i < refs.length; i++) {
+      const v = refs[i];
+      for (let j = refSize - 1; j >= 0; j--) {
+        buf[i * refSize + j] = (v >> (j * 8)) & 0xff;
+      }
+    }
+    return buf;
+  }
+};
+
+// ─── .3105 Crypto Helpers ───
+function bytesToHex(b) { return Array.from(b).map(x => x.toString(16).padStart(2,'0')).join(''); }
+function uuidToBytes(uuid) { return Uint8Array.from(uuid.replace(/-/g,'').match(/.{2}/g).map(x => parseInt(x,16))); }
+
+async function sha256(data) {
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return new Uint8Array(hash);
+}
+
+async function pbkdf2Derive(password, salt, iterations) {
+  const keyMaterial = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['wrapKey', 'unwrapKey']
+  );
+}
+
+async function aesGcmEncrypt(key, data, aad) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad, tagLength: 128 }, key, data);
+  return { iv, ciphertext: new Uint8Array(encrypted) };
+}
+
+async function buildPackage() {
+  const name = document.getElementById('bldName').value.trim();
+  const bundleId = document.getElementById('bldBundle').value.trim();
+  const desc = document.getElementById('bldDesc').value.trim();
+  const password = document.getElementById('bldPass').value;
+  const schemaVersion = parseInt(document.getElementById('bldSchema').value);
+  const btn = document.getElementById('bldBtn');
+  const status = document.getElementById('bldStatus');
+  const preview = document.getElementById('bldPreview');
+
+  if (!name) { toast('Nhập tên project', false); return; }
+  if (!bundleId) { toast('Nhập Bundle ID', false); return; }
+
+  btn.disabled = true; btn.innerHTML = '<i data-feather="loader"></i> Đang tạo...'; feather.replace();
+  status.textContent = 'Đang mã hóa...';
+  preview.style.display = 'none';
+
+  try {
+    const packageID = crypto.randomUUID();
+    const now = new Date();
+    const rules = bldFileData.map((f, i) => ({
+      id: crypto.randomUUID(),
+      bundleID: bundleId,
+      relativePath: '/' + f.name,
+      replacementFilename: f.name,
+      replacementData: Array.from(f.data)
+    }));
+
+    const project = {
+      id: packageID,
+      name: name,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      bundleIdentifiers: [bundleId],
+      directories: [],
+      rules: rules
+    };
+
+    const payloadObj = { project, replacementDigests: {} };
+    for (const r of rules) {
+      const digest = await sha256(r.replacementData);
+      payloadObj.replacementDigests[r.id] = Array.from(digest);
+    }
+
+    const payloadPlist = PLIST.encode(payloadObj);
+    const contentKeyRaw = crypto.getRandomValues(new Uint8Array(32));
+    const keyFingerprint = await sha256(contentKeyRaw);
+    let contentKey;
+
+    const isPasswordProtected = password.length > 0;
+    let kdfSalt, kdfIterations, wrappedContentKey, publicContentKey;
+
+    if (isPasswordProtected) {
+      kdfSalt = crypto.getRandomValues(new Uint8Array(16));
+      kdfIterations = 100000;
+      const wrappingKey = await pbkdf2Derive(password, kdfSalt, kdfIterations);
+      const wrapResult = await crypto.subtle.wrapKey('raw', wrappingKey, { name: 'AES-KW' }, contentKeyRaw);
+      wrappedContentKey = new Uint8Array(wrapResult);
+      contentKey = await crypto.subtle.importKey('raw', contentKeyRaw, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+    } else {
+      publicContentKey = contentKeyRaw;
+      contentKey = await crypto.subtle.importKey('raw', contentKeyRaw, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+    }
+
+    status.textContent = 'Đang mã hóa payload...';
+    const aad = new TextEncoder().encode('3105PATCH/v' + schemaVersion + '/payload/' + packageID);
+    const { iv: payloadIv, ciphertext: payloadCipher } = await aesGcmEncrypt(contentKey, payloadPlist, aad);
+    const encryptedPayload = new Uint8Array(payloadIv.length + payloadCipher.length + 16);
+    encryptedPayload.set(payloadIv, 0);
+    encryptedPayload.set(payloadCipher, payloadIv.length);
+
+    const envelope = {
+      schemaVersion: schemaVersion,
+      keyADVersion: null,
+      packageID: uuidToBytes(packageID),
+      isPasswordProtected: isPasswordProtected,
+      kdfSalt: kdfSalt || null,
+      kdfIterations: kdfIterations || null,
+      wrappedContentKey: wrappedContentKey || null,
+      publicContentKey: publicContentKey || null,
+      keyFingerprint: keyFingerprint,
+      encryptedPayload: encryptedPayload
+    };
+
+    status.textContent = 'Đang đóng gói...';
+    const envelopePlist = PLIST.encode(envelope);
+    const magic = new Uint8Array([0x33, 0x31, 0x30, 0x35, 0x50, 0x41, 0x54, 0x43, 0x48, 0x00]); // "3105PATCH\0"
+    const fileData = new Uint8Array(magic.length + envelopePlist.length);
+    fileData.set(magic, 0);
+    fileData.set(envelopePlist, magic.length);
+
+    const blob = new Blob([fileData], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name.replace(/[^a-zA-Z0-9_-]/g, '_') + '.3105';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const hash = bytesToHex(await sha256(fileData));
+    preview.style.display = 'block';
+    preview.textContent =
+      '✓ File created: ' + a.download + '\\n' +
+      '  Size: ' + formatSize(fileData.length) + '\\n' +
+      '  PackageID: ' + packageID + '\\n' +
+      '  Schema: v' + schemaVersion + '\\n' +
+      '  Password: ' + (isPasswordProtected ? 'Yes' : 'No (public key)') + '\\n' +
+      '  Rules: ' + rules.length + '\\n' +
+      '  SHA-256: ' + hash.substring(0, 32) + '...';
+
+    toast('Đã tạo file .3105 thành công!');
+    feather.replace();
+  } catch (e) {
+    toast('Lỗi: ' + e.message, false);
+    preview.style.display = 'block';
+    preview.textContent = 'ERROR: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i data-feather="download"></i> Tạo & Tải .3105'; feather.replace();
+    status.textContent = '';
+  }
 }
 
 // ─── Init ───
 document.getElementById('patchImage').onchange = function() { document.getElementById('imageName').textContent = this.files[0]?.name || ''; };
 document.getElementById('patchFile').onchange = function() { document.getElementById('fileName').textContent = this.files[0]?.name || ''; };
+document.getElementById('catImage').onchange = function() { document.getElementById('catImageName').textContent = this.files[0]?.name || ''; };
 
-(async () => { await loadCategories(); await loadStats(); await loadPatches(); })();
+(async () => { feather.replace(); await loadCategories(); await loadStats(); await loadPatches(); feather.replace(); })();
 </script>
 </body>
 </html>`);
@@ -2460,11 +2965,11 @@ app.get('/api/admin/ff/categories', requirePatchAdmin, async (req, res) => {
 // POST /api/admin/ff/categories
 app.post('/api/admin/ff/categories', requirePatchAdmin, async (req, res) => {
   try {
-    const { name, icon = '', sort_order = 0, is_active = true } = req.body;
+    const { name, icon = '', image_url = '', sort_order = 0, is_active = true } = req.body;
     if (!name) return res.json({ success: false, message: 'Name required' });
     const { data, error } = await supabase
       .from('game_categories')
-      .insert({ name, icon, sort_order, is_active })
+      .insert({ name, icon, image_url, sort_order, is_active })
       .select()
       .single();
     if (error) throw error;
