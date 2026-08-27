@@ -18,7 +18,7 @@
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
-const crypto = require('crypto'); // <-- Dòng mới thêm vào
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -318,7 +318,7 @@ app.get('/api/verify', async (req, res) => {
     const resType = rpc.type || 'basic';
     const resExpires = rpc.expires_at || '';
     const messageToHash = `true|${resType}|${resExpires}`;
-    const hmac = crypto.createHmac('sha256', secret).update(messageToHash).digest('hex');
+    const hmac = require('crypto').createHmac('sha256', secret).update(messageToHash).digest('hex');
 
     res.json({
       success: true,
