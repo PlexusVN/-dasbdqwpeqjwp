@@ -2018,22 +2018,7 @@ app.get(['/', '/web'], (req, res) => {
 // ============================================================
 //  PATCH MANAGER - Web Admin Panel
 // ============================================================
-function requirePatchAdminPage(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Basic ')) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Patch Manager"');
-    return res.status(401).send('Unauthorized - Vui long nhap tai khoan Admin');
-  }
-  const decoded = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
-  const [user, pass] = decoded.split(':');
-  if (user !== ADMIN_USER || pass !== ADMIN_PASS) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Patch Manager"');
-    return res.status(401).send('Unauthorized - Chi danh cho Main Admin');
-  }
-  next();
-}
-
-app.get('/admin/patches', requirePatchAdminPage, (req, res) => {
+app.get('/admin/patches', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -2168,9 +2153,29 @@ tr:hover td{background:rgba(59,130,246,.03)}
   .form-row{grid-template-columns:1fr}
   .nav{width:100%;justify-content:center}
 }
+.login-overlay{position:fixed;inset:0;background:var(--bg2);display:flex;align-items:center;justify-content:center;z-index:9999}
+.login-box{background:var(--bg2);border:1px solid var(--border);padding:40px;width:100%;max-width:400px;border-radius:20px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.login-box h2{font-size:20px;font-weight:700;text-align:center;margin-bottom:24px;display:flex;align-items:center;justify-content:center;gap:8px}
+.login-box h2 i{color:var(--accent)}
 </style>
 </head>
 <body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2><i data-feather="grid"></i> PATCH MANAGER</h2>
+    <div class="form-group">
+      <label>Tên đăng nhập</label>
+      <input type="text" id="loginUser" placeholder="admin" onkeydown="if(event.key==='Enter') login()">
+    </div>
+    <div class="form-group">
+      <label>Mật khẩu</label>
+      <input type="password" id="loginPass" placeholder="•" onkeydown="if(event.key==='Enter') login()">
+    </div>
+    <button class="btn btn-primary" style="width: 100%; margin-top: 8px; justify-content: center; padding: 12px;" onclick="login()">ĐĂNG NHẬP</button>
+  </div>
+</div>
 
 <div class="header">
   <div class="header-left">
@@ -2183,6 +2188,7 @@ tr:hover td{background:rgba(59,130,246,.03)}
   <div class="nav">
     <a href="/"><i data-feather="shield"></i> Auth</a>
     <a href="/admin/patches" class="active"><i data-feather="grid"></i> Patches</a>
+    <a href="#" onclick="logout(); return false;" style="color:var(--red)"><i data-feather="log-out"></i> Thoát</a>
   </div>
 </div>
 
@@ -2318,14 +2324,53 @@ tr:hover td{background:rgba(59,130,246,.03)}
 const API = '';
 let categories = [];
 let bldFileData = [];
+let token = localStorage.getItem('rox_patch_token') || '';
+
+async function login() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value.trim();
+  if(!u || !p) return toast('Vui lòng nhập tài khoản và mật khẩu', false);
+  try {
+    token = btoa(unescape(encodeURIComponent(u + ':' + p)));
+  } catch(e) {
+    return toast('Mật khẩu chứa kí tự không hợp lệ', false);
+  }
+  try {
+    const r = await fetch(API + '/api/admin/ff/categories', { headers: { 'Authorization': 'Basic ' + token } });
+    if(r.status === 401) { token = ''; return toast('Tài khoản hoặc mật khẩu không đúng (Chỉ Main Admin)', false); }
+    if(!r.ok) return toast('Lỗi máy chủ', false);
+    
+    document.getElementById('loginOverlay').style.display = 'none';
+    localStorage.setItem('rox_patch_token', token);
+    toast('Đăng nhập thành công', true);
+    
+    await loadCategories();
+    await loadStats();
+    await loadPatches();
+    feather.replace();
+  } catch(e) {
+    toast('Lỗi kết nối', false);
+  }
+}
+
+function logout() {
+  token = '';
+  localStorage.removeItem('rox_patch_token');
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('loginPass').value = '';
+}
 
 async function api(path, opts = {}) {
-  const headers = { 'Authorization': 'Basic ' + btoa('admin:mkhaidz'), ...opts.headers };
+  const headers = { 'Authorization': 'Basic ' + token, ...opts.headers };
   if (opts.body && !(opts.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(opts.body);
   }
   const r = await fetch(API + path, { ...opts, headers });
+  if (r.status === 401) {
+    logout();
+    throw new Error('Unauthorized');
+  }
   return r.json();
 }
 
@@ -2480,9 +2525,10 @@ async function uploadFile(file, bucket) {
   formData.append('file', file);
   const r = await fetch(API + '/api/admin/upload/' + bucket, {
     method: 'POST',
-    headers: { 'Authorization': 'Basic ' + btoa('admin:mkhaidz') },
+    headers: { 'Authorization': 'Basic ' + token },
     body: formData
   });
+  if (r.status === 401) { logout(); throw new Error('Unauthorized'); }
   return r.json();
 }
 
@@ -2906,7 +2952,22 @@ document.getElementById('patchImage').onchange = function() { document.getElemen
 document.getElementById('patchFile').onchange = function() { document.getElementById('fileName').textContent = this.files[0]?.name || ''; };
 document.getElementById('catImage').onchange = function() { document.getElementById('catImageName').textContent = this.files[0]?.name || ''; };
 
-(async () => { feather.replace(); await loadCategories(); await loadStats(); await loadPatches(); feather.replace(); })();
+(async () => { 
+  feather.replace(); 
+  if (token) {
+    try {
+      const r = await fetch(API + '/api/admin/ff/categories', { headers: { 'Authorization': 'Basic ' + token } });
+      if (r.status === 401) { logout(); return; }
+      document.getElementById('loginOverlay').style.display = 'none';
+      await loadCategories(); 
+      await loadStats(); 
+      await loadPatches(); 
+      feather.replace();
+    } catch(e) { logout(); }
+  } else {
+    logout();
+  }
+})();
 </script>
 </body>
 </html>`);
