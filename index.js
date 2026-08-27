@@ -318,7 +318,7 @@ app.get('/api/verify', async (req, res) => {
     const resType = rpc.type || 'basic';
     const resExpires = rpc.expires_at || '';
     const messageToHash = `true|${resType}|${resExpires}`;
-    const hmac = require('crypto').createHmac('sha256', secret).update(messageToHash).digest('hex');
+    const hmac = require('crypto').createHmac('sha256', secret).update(messageToHash).digest('base64');
 
     res.json({
       success: true,
