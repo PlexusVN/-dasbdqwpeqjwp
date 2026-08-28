@@ -28,6 +28,34 @@ const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(cors({ origin: corsOrigin, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] }));
 app.use(express.json());
 app.set('trust proxy', true);           // lấy IP thật từ Render LB
+
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
+// Bật Helmet để thêm các Security Headers bảo vệ server (tắt CSP để tránh block JS/CSS inline trên giao diện UI)
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
+
+// Global Rate Limiter: 200 requests / 5 phút (cho toàn bộ endpoints)
+const globalLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 phút
+  max: 200,
+  message: { success: false, message: 'Too many requests from this IP, please try again after 5 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(globalLimiter);
+
+// Strict API Limiter: 30 requests / 1 phút (cho các API nhạy cảm)
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 phút
+  max: 30,
+  message: { success: false, message: 'Quá nhiều yêu cầu, vui lòng thử lại sau' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.get('/favicon.ico', (req, res) => res.status(204).end()); // Bỏ qua lỗi 404 favicon
 
 // ---- Supabase client ----
@@ -270,7 +298,7 @@ function checkRateLimit(ip, maxReqs = 5, windowMs = 1000) {
 }
 
 // ---- Verify Key (PUBLIC) ----
-app.get('/api/verify', async (req, res) => {
+app.get('/api/verify', apiLimiter, async (req, res) => {
   try {
     const { key, hwid, secret } = req.query;
     if (!key || !hwid || !secret) {
@@ -423,7 +451,7 @@ app.post('/api/keys', requireAdmin, async (req, res) => {
 app.get('/api/keys', requireAdmin, async (req, res) => {
   try {
     const { product_id, status } = req.query;
-    let query = supabase.from('keys').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('keys').select('*').order('created_at', { ascending: false }).limit(1000);
     if (product_id) query = query.eq('product_id', parseInt(product_id));
     if (status) query = query.eq('status', status);
     const { data: keys, error } = await query;
@@ -618,7 +646,7 @@ app.get('/api/online', requireAdmin, async (req, res) => {
 // ---- Logs (ADMIN) ----
 app.get('/api/logs', requireAdmin, async (req, res) => {
   try {
-    const { data: logs, error } = await supabase.from('activity_log').select('*').order('created_at', { ascending: false });
+    const { data: logs, error } = await supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(1000);
     if (error) throw error;
     res.json({ success: true, data: logs });
   } catch (err) {
@@ -1551,6 +1579,7 @@ app.get(['/', '/web'], (req, res) => {
     return {c: 'badge-active', t: 'ACTIVE'};
   }
   function copy(txt) { navigator.clipboard.writeText(txt); showToast('Copied to clipboard'); }
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
   // --- Dashboard ---
   function updateDashboard() {
@@ -1674,12 +1703,12 @@ app.get(['/', '/web'], (req, res) => {
       if(s.t === 'ACTIVE' && expD && expD < next7Days) warn = \`<span class="badge badge-warn" title="Expiring soon!">!</span>\`;
       
       return \`<tr>
-        <td><input type="checkbox" class="row-check" value="\${k.key}" \${selectedKeys.has(k.key)?'checked':''} onchange="toggleSelect(this)"></td>
-        <td class="mono copyable" onclick="copy('\${k.key}')">\${k.key}</td>
-        <td><span class="badge" style="background: #e5e7eb;">\${pMap[k.product_id]||'UNK'}</span></td>
-        <td style="font-size: 13px; font-weight: 700; text-transform: uppercase;">\${k.type||'BASIC'}</td>
+        <td><input type="checkbox" class="row-check" value="\${esc(k.key)}" \${selectedKeys.has(k.key)?'checked':''} onchange="toggleSelect(this)"></td>
+        <td class="mono copyable" onclick="copy('\${esc(k.key)}')">\${esc(k.key)}</td>
+        <td><span class="badge" style="background: #e5e7eb;">\${esc(pMap[k.product_id]||'UNK')}</span></td>
+        <td style="font-size: 13px; font-weight: 700; text-transform: uppercase;">\${esc(k.type||'BASIC')}</td>
         <td><span class="badge \${s.c}">\${s.t}</span>\${warn}</td>
-        <td style="font-weight: 600;">\${k.user||'-'}</td>
+        <td style="font-weight: 600;">\${esc(k.user||'-')}</td>
         <td class="mono">\${hwidCount}/\${maxDev}</td>
         <td style="font-weight: 600;">\${expStr}</td>
         <td style="text-align: right;">
@@ -1881,10 +1910,10 @@ app.get(['/', '/web'], (req, res) => {
       
       return '<tr>' +
         '<td class="mono text-muted">' + new Date(l.created_at).toLocaleString() + '</td>' +
-        '<td style="font-weight: 700; color: var(--accent);">' + creator + '</td>' +
-        '<td><span class="badge" style="background: #e5e7eb;">' + product + '</span></td>' +
-        '<td style="font-weight: 700; text-transform: uppercase;">' + type + '</td>' +
-        '<td class="mono">' + l.key + '</td>' +
+        '<td style="font-weight: 700; color: var(--accent);">' + esc(creator) + '</td>' +
+        '<td><span class="badge" style="background: #e5e7eb;">' + esc(product) + '</span></td>' +
+        '<td style="font-weight: 700; text-transform: uppercase;">' + esc(type) + '</td>' +
+        '<td class="mono">' + esc(l.key) + '</td>' +
       '</tr>';
     }).join('');
   }
@@ -1908,9 +1937,9 @@ app.get(['/', '/web'], (req, res) => {
     if(!dataStore.logs.length) { tbody.innerHTML = \`<tr><td colspan="4" style="text-align: center; padding: 40px; font-weight: 700;">KHÔNG CÓ NHẬT KÝ</td></tr>\`; return; }
     tbody.innerHTML = dataStore.logs.slice(0, 100).map(l => \`<tr>
       <td class="mono text-muted">\${new Date(l.created_at).toLocaleString()}</td>
-      <td style="color: var(--accent); font-weight: 700; text-transform: uppercase;">\${l.action}</td>
-      <td class="mono copyable" onclick="copy('\${l.key}')">\${l.key}</td>
-      <td style="white-space: normal;">\${l.detail}</td>
+      <td style="color: var(--accent); font-weight: 700; text-transform: uppercase;">\${esc(l.action)}</td>
+      <td class="mono copyable" onclick="copy('\${esc(l.key)}')">\${esc(l.key)}</td>
+      <td style="white-space: normal;">\${esc(l.detail)}</td>
     </tr>\`).join('');
   }
   function renderProducts() {
@@ -1960,9 +1989,9 @@ app.get(['/', '/web'], (req, res) => {
         return;
       }
       tbody.innerHTML = data.data.map((s) => '<tr>' +
-        '<td style="font-weight: 700;">' + s.username + '</td>' +
+        '<td style="font-weight: 700;">' + esc(s.username) + '</td>' +
         '<td><span class="badge badge-active">FULL ACCESS</span></td>' +
-        '<td style="text-align: right;"><button class="btn-icon text-danger admin-only" onclick="delSubAdmin(\\'' + s.username + '\\')"><i data-feather="trash"></i></button></td>' +
+        '<td style="text-align: right;"><button class="btn-icon text-danger admin-only" onclick="delSubAdmin(\\'' + esc(s.username) + '\\')"><i data-feather="trash"></i></button></td>' +
       '</tr>').join('');
       feather.replace();
     } catch(e) {
@@ -3011,7 +3040,7 @@ app.get('/api/ff/patches', async (req, res) => {
 });
 
 // GET /api/ff/sync — full metadata for sync check
-app.get('/api/ff/sync', async (req, res) => {
+app.get('/api/ff/sync', apiLimiter, async (req, res) => {
   try {
     const authKey = req.headers['x-auth-key'];
     if (!authKey) {
@@ -3069,7 +3098,7 @@ app.get('/api/ff/sync', async (req, res) => {
 });
 
 // GET /api/ff/download/:slug — proxy download endpoint
-app.get('/api/ff/download/:slug', async (req, res) => {
+app.get('/api/ff/download/:slug', apiLimiter, async (req, res) => {
   try {
     const authKey = req.headers['x-auth-key'];
     if (!authKey) {
@@ -3278,7 +3307,7 @@ app.delete('/api/admin/ff/patches/:id', requirePatchAdmin, async (req, res) => {
 // ---- Upload endpoints (Supabase Storage) ----
 const multer = require('multer');
 const crypto = require('crypto');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
 app.post('/api/admin/upload/image', requireAdmin, upload.single('file'), async (req, res) => {
   try {
