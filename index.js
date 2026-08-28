@@ -2169,15 +2169,21 @@ tr:hover td{background:rgba(59,130,246,.03)}
 <div class="login-overlay" id="loginOverlay">
   <div class="login-box">
     <h2><i data-feather="grid"></i> PATCH MANAGER</h2>
-    <div class="form-group">
-      <label>Tên đăng nhập</label>
-      <input type="text" id="loginUser" placeholder="admin" onkeydown="if(event.key==='Enter') login()">
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Tên đăng nhập</label>
+        <input type="text" id="loginUser" placeholder="admin" onkeydown="if(event.key==='Enter') login()">
+      </div>
+      <div class="form-group">
+        <label>Mật khẩu</label>
+        <input type="password" id="loginPass" placeholder="•" onkeydown="if(event.key==='Enter') login()">
+      </div>
+      <button class="btn btn-primary" style="width: 100%; margin-top: 8px; justify-content: center; padding: 12px;" onclick="login()">ĐĂNG NHẬP</button>
     </div>
-    <div class="form-group">
-      <label>Mật khẩu</label>
-      <input type="password" id="loginPass" placeholder="•" onkeydown="if(event.key==='Enter') login()">
+    <div id="loginLoading" style="display: none; text-align: center; color: var(--text3); padding: 20px 0;">
+      <i data-feather="loader" class="loading" style="width: 32px; height: 32px; margin-bottom: 12px;"></i>
+      <div>Đang đăng nhập tự động...</div>
     </div>
-    <button class="btn btn-primary" style="width: 100%; margin-top: 8px; justify-content: center; padding: 12px;" onclick="login()">ĐĂNG NHẬP</button>
   </div>
 </div>
 
@@ -2328,7 +2334,7 @@ tr:hover td{background:rgba(59,130,246,.03)}
 const API = '';
 let categories = [];
 let bldFileData = [];
-let token = localStorage.getItem('rox_patch_token') || '';
+let token = '';
 
 async function login() {
   const u = document.getElementById('loginUser').value.trim();
@@ -2345,7 +2351,6 @@ async function login() {
     if(!r.ok) return toast('Lỗi máy chủ', false);
     
     document.getElementById('loginOverlay').style.display = 'none';
-    localStorage.setItem('rox_patch_token', token);
     toast('Đăng nhập thành công', true);
     
     await loadCategories();
@@ -2359,8 +2364,9 @@ async function login() {
 
 function logout() {
   token = '';
-  localStorage.removeItem('rox_patch_token');
   document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('loginLoading').style.display = 'none';
   document.getElementById('loginPass').value = '';
 }
 
@@ -2958,19 +2964,7 @@ document.getElementById('catImage').onchange = function() { document.getElementB
 
 (async () => { 
   feather.replace(); 
-  if (token) {
-    try {
-      const r = await fetch(API + '/api/admin/ff/categories', { headers: { 'Authorization': 'Basic ' + token } });
-      if (r.status === 401) { logout(); return; }
-      document.getElementById('loginOverlay').style.display = 'none';
-      await loadCategories(); 
-      await loadStats(); 
-      await loadPatches(); 
-      feather.replace();
-    } catch(e) { logout(); }
-  } else {
-    logout();
-  }
+  logout();
 })();
 </script>
 </body>
