@@ -738,10 +738,16 @@ app.get('/api/online', requireAdmin, async (req, res) => {
 
 // ---- Logs (ADMIN) ----
 app.get('/api/logs', requireAdmin, async (req, res) => {
-  if (req.adminRole !== 'master') return res.status(403).json({ success: false, message: 'Forbidden' });
   try {
     const { data: logs, error } = await supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(1000);
     if (error) throw error;
+
+    if (req.adminRole !== 'master') {
+      // Sub-admins only see logs related to their own username
+      const filtered = logs.filter(l => l.detail && l.detail.includes(`[Creator: ${req.adminUser}]`));
+      return res.json({ success: true, data: filtered });
+    }
+
     res.json({ success: true, data: logs });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
