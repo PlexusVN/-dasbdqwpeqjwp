@@ -116,11 +116,6 @@ async function checkKeyOwnership(req, res, next) {
     if (!data) return res.status(404).json({ success: false, message: 'Key not found' });
     if (data.user !== req.adminUser) return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên key này' });
     
-    const allowed = (req.allowedProducts || []).map(p => String(p));
-    if (!allowed.includes(String(data.product_id))) {
-      return res.status(403).json({ success: false, message: 'Quyền quản lý sản phẩm của key này đã bị thu hồi' });
-    }
-    
     next();
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -519,13 +514,6 @@ app.get('/api/keys', requireAdmin, async (req, res) => {
     let query = supabase.from('keys').select('*', { count: 'exact' }).order('created_at', { ascending: false }).limit(1000);
     if (req.adminRole === 'subadmin') {
       query = query.eq('user', req.adminUser);
-      const allowed = (req.allowedProducts || []).map(p => String(p));
-      if (allowed.length > 0) {
-        query = query.in('product_id', allowed);
-      } else {
-        // If no products allowed, return nothing
-        query = query.eq('product_id', -1);
-      }
     }
     if (product_id) query = query.eq('product_id', parseInt(product_id));
     if (status) query = query.eq('status', status);
@@ -684,12 +672,6 @@ app.get('/api/stats', requireAdmin, async (req, res) => {
     if (product_id) query = query.eq('product_id', parseInt(product_id));
     if (req.adminRole === 'subadmin') {
       query = query.eq('user', req.adminUser);
-      const allowed = (req.allowedProducts || []).map(p => String(p));
-      if (allowed.length > 0) {
-        query = query.in('product_id', allowed);
-      } else {
-        query = query.eq('product_id', -1);
-      }
     }
     const { data: keys, error } = await query;
     if (error) throw error;
@@ -720,12 +702,6 @@ app.get('/api/online', requireAdmin, async (req, res) => {
     if (product_id) query = query.eq('product_id', parseInt(product_id));
     if (req.adminRole === 'subadmin') {
       query = query.eq('user', req.adminUser);
-      const allowed = (req.allowedProducts || []).map(p => String(p));
-      if (allowed.length > 0) {
-        query = query.in('product_id', allowed);
-      } else {
-        query = query.eq('product_id', -1);
-      }
     }
 
     const { data, error } = await query;
