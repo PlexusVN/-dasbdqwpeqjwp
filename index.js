@@ -1534,6 +1534,7 @@ app.get(['/', '/web'], (req, res) => {
   let token = '';
   let isSubAdmin = false;
   let currentAdminName = "MASTER";
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
   let dataStore = { keys: [], products: [], logs: [], stats: null, online: [] };
   let selectedKeys = new Set();
   let currentPage = 1;
