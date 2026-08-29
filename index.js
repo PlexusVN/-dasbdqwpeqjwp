@@ -511,7 +511,7 @@ app.post('/api/keys', requireAdmin, async (req, res) => {
 app.get('/api/keys', requireAdmin, async (req, res) => {
   try {
     const { product_id, status } = req.query;
-    let query = supabase.from('keys').select('*', { count: 'exact' }).order('created_at', { ascending: false }).limit(1000);
+    let query = supabase.from('keys').select('*', { count: 'exact' }).order('created_at', { ascending: false }).limit(10000);
     if (req.adminRole === 'subadmin') {
       query = query.eq('user', req.adminUser);
     }
@@ -673,7 +673,7 @@ app.get('/api/stats', requireAdmin, async (req, res) => {
     if (req.adminRole === 'subadmin') {
       query = query.eq('user', req.adminUser);
     }
-    const { data: keys, error } = await query;
+    const { data: keys, error } = await query.limit(100000);
     if (error) throw error;
 
     const total = keys.length;
@@ -696,7 +696,8 @@ app.get('/api/online', requireAdmin, async (req, res) => {
       .from('keys')
       .select('key, hwid, last_seen, status, user, type, expires_at, product_id')
       .gte('last_seen', cutoff)
-      .order('last_seen', { ascending: false });
+      .order('last_seen', { ascending: false })
+      .limit(10000);
 
     const { product_id } = req.query;
     if (product_id) query = query.eq('product_id', parseInt(product_id));
@@ -715,7 +716,7 @@ app.get('/api/online', requireAdmin, async (req, res) => {
 // ---- Logs (ADMIN) ----
 app.get('/api/logs', requireAdmin, async (req, res) => {
   try {
-    const { data: logs, error } = await supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(1000);
+    const { data: logs, error } = await supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(10000);
     if (error) throw error;
 
     if (req.adminRole !== 'master') {
