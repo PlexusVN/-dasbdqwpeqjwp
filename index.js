@@ -511,14 +511,25 @@ app.post('/api/keys', requireAdmin, async (req, res) => {
 app.get('/api/keys', requireAdmin, async (req, res) => {
   try {
     const { product_id, status } = req.query;
-    let query = supabase.from('keys').select('*', { count: 'exact' }).order('created_at', { ascending: false }).limit(10000);
-    if (req.adminRole === 'subadmin') {
-      query = query.eq('user', req.adminUser);
+    
+    let allKeys = [];
+    let from = 0;
+    const step = 1000;
+    while(true) {
+      let q = supabase.from('keys').select('*').order('created_at', { ascending: false }).range(from, from + step - 1);
+      if (req.adminRole === 'subadmin') q = q.eq('user', req.adminUser);
+      if (product_id) q = q.eq('product_id', parseInt(product_id));
+      if (status) q = q.eq('status', status);
+      
+      const { data, error } = await q;
+      if (error) throw error;
+      if (data && data.length > 0) allKeys = allKeys.concat(data);
+      if (!data || data.length < step) break;
+      from += step;
     }
-    if (product_id) query = query.eq('product_id', parseInt(product_id));
-    if (status) query = query.eq('status', status);
-    const { data: keys, count, error } = await query;
-    if (error) throw error;
+    
+    const keys = allKeys;
+    const count = allKeys.length;
     
     // Nối danh sách thiết bị từ bảng key_devices
     const keysWithDevices = await attachDeviceInfo(keys);
@@ -668,13 +679,23 @@ app.post('/api/keys/:key/max-devices', requireAdmin, checkKeyOwnership, async (r
 app.get('/api/stats', requireAdmin, async (req, res) => {
   try {
     const { product_id } = req.query;
-    let query = supabase.from('keys').select('status,expires_at,product_id');
-    if (product_id) query = query.eq('product_id', parseInt(product_id));
-    if (req.adminRole === 'subadmin') {
-      query = query.eq('user', req.adminUser);
+    
+    let allKeys = [];
+    let from = 0;
+    const step = 1000;
+    while(true) {
+      let q = supabase.from('keys').select('status,expires_at,product_id').range(from, from + step - 1);
+      if (product_id) q = q.eq('product_id', parseInt(product_id));
+      if (req.adminRole === 'subadmin') q = q.eq('user', req.adminUser);
+      
+      const { data, error } = await q;
+      if (error) throw error;
+      if (data && data.length > 0) allKeys = allKeys.concat(data);
+      if (!data || data.length < step) break;
+      from += step;
     }
-    const { data: keys, error } = await query.limit(100000);
-    if (error) throw error;
+    
+    const keys = allKeys;
 
     const total = keys.length;
     const now = new Date().toISOString();
