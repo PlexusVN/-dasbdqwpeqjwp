@@ -13,7 +13,7 @@
 //     URL: https://ten-render-project.onrender.com/api/health
 //     Interval: 5 minutes
 //  6. Deploy
-// ===========================================================
+// ============================================================
 
 const express = require('express');
 const cors = require('cors');
@@ -1644,6 +1644,7 @@ app.get(['/', '/web'], (req, res) => {
 
   function logout() {
     token = '';
+    localStorage.removeItem('rox_master_token');
     document.getElementById('loginOverlay').style.display = 'flex';
     document.getElementById('loginPass').value = '';
     if (refreshTimer) clearInterval(refreshTimer);
