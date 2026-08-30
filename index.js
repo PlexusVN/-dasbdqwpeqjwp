@@ -1459,7 +1459,7 @@ app.get(['/', '/web'], (req, res) => {
     </div>
     <div class="table-container" style="max-width: 1000px;">
       <table>
-        <thead><tr><th>TÊN TÀI KHOẢN</th><th>SẢN PHẨM ĐƯỢC PHÉP</th><th>CHỨC VỤ</th><th style="text-align: right;">THAO TÁC</th></tr></thead>
+        <thead><tr><th>TÊN TÀI KHOẢN (v2)</th><th>SẢN PHẨM ĐƯỢC PHÉP</th><th>CHỨC VỤ</th><th style="text-align: right;">THAO TÁC</th></tr></thead>
         <tbody id="subAdminsTableBody"></tbody>
       </table>
     </div>
