@@ -2148,7 +2148,7 @@ app.get(['/', '/web'], (req, res) => {
       const res = await fetch(API + '/subadmins', { headers: { 'Authorization': 'Basic ' + token } });
       const data = await res.json();
       if(!data.success) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">Lỗi: ${data.message} (Hãy kiểm tra lại các cột trong bảng sub_admins trên Supabase)</td></tr>`;
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Lỗi: ' + data.message + ' (Hãy kiểm tra lại các cột trong bảng sub_admins trên Supabase)</td></tr>';
         return;
       }
       if(!data.data || data.data.length === 0) {
