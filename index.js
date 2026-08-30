@@ -252,8 +252,11 @@ app.get('/api/subadmins', requireAdmin, async (req, res) => {
     // Fetch precise counts per product for each subadmin
     for (const sa of data) {
       sa.key_counts = {};
-      if (sa.allowed_products && Array.isArray(sa.allowed_products)) {
-        for (const pid of sa.allowed_products) {
+      let ap = sa.allowed_products;
+      if (typeof ap === 'string') { try { ap = JSON.parse(ap); } catch(e) { ap = []; } }
+      if (ap && Array.isArray(ap)) {
+        sa.allowed_products = ap; // normalize to array for the frontend response too
+        for (const pid of ap) {
           const { count, error: cErr } = await supabase.from('keys')
             .select('*', { count: 'exact', head: true })
             .eq('user', sa.username)
