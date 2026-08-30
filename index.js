@@ -1621,10 +1621,13 @@ app.get(['/', '/web'], (req, res) => {
       if (j.role === 'subadmin') {
         isSubAdmin = true;
         currentAdminName = j.user;
+        document.querySelectorAll('.admin-only').forEach(e => e.style.display = 'none');
+        document.getElementById('sec-subadmins').style.display = 'none';
         showToast('Đăng nhập Sub-Admin thành công', 'success');
       } else {
         isSubAdmin = false;
         currentAdminName = j.user || "MASTER";
+        document.querySelectorAll('.admin-only').forEach(e => e.style.display = '');
         showToast('Đăng nhập thành công', 'success');
       }
       
