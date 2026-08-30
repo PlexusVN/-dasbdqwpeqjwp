@@ -2145,27 +2145,36 @@ app.get(['/', '/web'], (req, res) => {
     try {
       const res = await fetch(API + '/subadmins', { headers: { 'Authorization': 'Basic ' + token } });
       const data = await res.json();
-      if(!data.success || !data.data.length) {
+      if(!data.success || !data.data || data.data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; font-weight: 700;">CHƯA CÓ TÀI KHOẢN CẤP DƯỚI</td></tr>';
         return;
       }
       subAdminsData = data.data;
-      const pMap = {}; dataStore.products.forEach(x => pMap[x.id] = x.name.toUpperCase());
+      const pMap = {}; 
+      if (dataStore.products && Array.isArray(dataStore.products)) {
+        dataStore.products.forEach(x => { if(x.name) pMap[x.id] = x.name.toUpperCase(); });
+      }
       
       tbody.innerHTML = data.data.map((s) => {
-        let prods = (s.allowed_products || []).map(pid => {
+        let rawProds = s.allowed_products;
+        let prodArr = [];
+        if (Array.isArray(rawProds)) prodArr = rawProds;
+        else if (typeof rawProds === 'string') {
+          try { prodArr = JSON.parse(rawProds); } catch(e) {}
+        }
+        let prods = prodArr.map(pid => {
           let count = (s.key_counts && s.key_counts[pid]) ? s.key_counts[pid] : 0;
           return \`<span class="badge" style="background: #e5e7eb; color: #000; margin-right: 4px;">\${pMap[pid] || pid} (\${count} keys)</span>\`;
         }).join('');
         if (!prods) prods = '<span class="text-muted mono">NONE</span>';
         
         return '<tr>' +
-        '<td style="font-weight: 700;">' + esc(s.username) + '</td>' +
+        '<td style="font-weight: 700;">' + esc(s.username || 'unknown') + '</td>' +
         '<td>' + prods + '</td>' +
         '<td><span class="badge badge-active">SUB ADMIN</span></td>' +
         '<td style="text-align: right;">' +
-        '<button class="btn-icon admin-only" onclick="openSubAdminModal(\\'' + esc(s.username) + '\\')" style="margin-right: 8px;"><i data-feather="edit"></i></button>' +
-        '<button class="btn-icon text-danger admin-only" onclick="delSubAdmin(\\'' + esc(s.username) + '\\')"><i data-feather="trash"></i></button>' +
+        '<button class="btn-icon admin-only" onclick="openSubAdminModal(\\'' + esc(s.username || '') + '\\')" style="margin-right: 8px;"><i data-feather="edit"></i></button>' +
+        '<button class="btn-icon text-danger admin-only" onclick="delSubAdmin(\\'' + esc(s.username || '') + '\\')"><i data-feather="trash"></i></button>' +
         '</td></tr>';
       }).join('');
       feather.replace();
