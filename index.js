@@ -147,7 +147,12 @@ async function attachDeviceInfo(keys) {
   } catch (e) { /* bảng chưa tồn tại: bỏ qua */ }
 
   keys.forEach(k => {
-    const devs = by[k.id] || [];
+    let devs = by[k.id] || [];
+    if (devs.length === 0 && k.hwid && k.hwid !== '[]' && k.hwid !== '') {
+        try {
+            devs = k.hwid.startsWith('[') ? JSON.parse(k.hwid) : [k.hwid];
+        } catch(e) {}
+    }
     k.devices = devs;
     k.device_count = devs.length;
   });
