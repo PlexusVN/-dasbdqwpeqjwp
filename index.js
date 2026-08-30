@@ -247,9 +247,7 @@ app.get('/api/subadmins', requireAdmin, async (req, res) => {
   if (req.adminRole !== 'master') return res.status(403).json({ success: false, message: 'Forbidden' });
   try {
     const { data, error } = await supabase.from('sub_admins').select('username, created_at, allowed_products').order('created_at', { ascending: false });
-    if (error) throw error;
-    
-    // Fetch precise counts per product for each subadmin
+    if (error) return res.status(500).json({ success: false, message: error.message || 'Lỗi query sub_admins' });
     for (const sa of data) {
       sa.key_counts = {};
       let ap = sa.allowed_products;
@@ -1564,6 +1562,7 @@ app.get(['/', '/web'], (req, res) => {
   // --- Core State & Auth ---
   const API = window.location.origin + '/api';
   let token = '';
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
   let isSubAdmin = false;
   let currentAdminName = "MASTER";
   let dataStore = { keys: [], products: [], logs: [], stats: null, online: [] };
@@ -2148,7 +2147,11 @@ app.get(['/', '/web'], (req, res) => {
     try {
       const res = await fetch(API + '/subadmins', { headers: { 'Authorization': 'Basic ' + token } });
       const data = await res.json();
-      if(!data.success || !data.data || data.data.length === 0) {
+      if(!data.success) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">Lỗi: ${data.message} (Hãy kiểm tra lại các cột trong bảng sub_admins trên Supabase)</td></tr>`;
+        return;
+      }
+      if(!data.data || data.data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; font-weight: 700;">CHƯA CÓ TÀI KHOẢN CẤP DƯỚI</td></tr>';
         return;
       }
